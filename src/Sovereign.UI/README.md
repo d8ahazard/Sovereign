@@ -11,6 +11,9 @@ SDK and additional build components that are introduced deliberately in Mileston
 ("Service, UI, and IPC skeleton"). Adding it now would expand the build surface without
 delivering Milestone 0 value.
 
+The friendly-but-powerful design (badges, clickable feature/app cards, profiles, the live
+connection timeline, restore points) is specified in [`docs/ui-design.md`](../../docs/ui-design.md).
+
 ## Responsibilities (when implemented)
 
 - Dashboard, connection prompts, settings, profiles, searchable event history.

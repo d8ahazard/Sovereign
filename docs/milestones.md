@@ -30,7 +30,8 @@ Gate:
 ## Milestone 1: Service, UI, and IPC skeleton (not started)
 
 Deliver: installable Windows service; unelevated WinUI shell; authenticated local IPC; health
-status; version negotiation; local event store; CLI diagnostics.
+status; version negotiation; local event store; CLI diagnostics. UI structure and behavior are
+specified in [`ui-design.md`](ui-design.md).
 
 Gate: unauthorized local process cannot invoke privileged operations; UI loss does not affect
 service state; service restart preserves committed state.
@@ -64,7 +65,10 @@ repeated events are rate-limited without audit loss.
 Deliver verified policies for OneDrive, Windows Backup, settings sync, cloud clipboard,
 cross-device experiences, Phone Link, advertising ID, consumer experiences, Spotlight, search
 highlights/web search, location, maps, Copilot, Recall, Click to Do, selected inbox-app AI
-features, and relevant tasks/services.
+features, and relevant tasks/services. Candidate scope is in
+[`debloat-catalog.md`](debloat-catalog.md); each policy's capture/restore follows
+[`reversibility.md`](reversibility.md); mechanisms come from the dated
+[`research/`](research/) records (verified in a VM before implementation).
 
 Gate: every policy supports detect/apply/verify/repair/rollback; unsupported builds are
 reported, not guessed; drift is detected after simulated restoration.

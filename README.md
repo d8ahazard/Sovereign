@@ -77,6 +77,17 @@ scripts/    bootstrap / build / test / verify / restore-network
 tools/      Lab, packet-capture, and policy-fixture placeholders
 ```
 
+## Design and research
+
+Forward-looking design and research groundwork (guides Milestones 1 and 5; not yet implemented):
+
+- [`docs/ui-design.md`](docs/ui-design.md) - friendly-but-powerful control panel spec.
+- [`docs/debloat-catalog.md`](docs/debloat-catalog.md) - comprehensive candidate list of apps,
+  AI/cloud components, and features to manage, with risk and restore method.
+- [`docs/reversibility.md`](docs/reversibility.md) - how every change is captured and undone.
+- [`docs/research/`](docs/research/) - primary-source records for Appx debloat and privacy/Copilot
+  controls.
+
 ## Security
 
 See [`SECURITY.md`](SECURITY.md) for the security model and non-goals. Sovereign is not a

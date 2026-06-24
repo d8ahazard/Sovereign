@@ -73,4 +73,9 @@ Copy the block below into a new dated file.
 
 ## Index
 
-_No research records yet. Milestone 0 introduces no behavior requiring external research._
+- [2026-06-24: Appx/provisioned-package debloat and its reversibility](2026-06-24-appx-debloat-and-reversibility.md)
+- [2026-06-24: Privacy, policy, and Copilot controls](2026-06-24-privacy-policy-and-copilot-controls.md)
+
+These records are research groundwork for the de-cloud/debloat policy pack (Milestone 5). They
+do not authorize implementation; each claim must still meet the verification bar above (current
+official docs + a disposable-VM reproduction) before code is written.
