@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Sovereign.Storage</RootNamespace>
+    <AssemblyName>Sovereign.Storage</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sovereign.Contracts\Sovereign.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

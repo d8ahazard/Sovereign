@@ -1,0 +1,60 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+
+# .NET / NuGet
+*.user
+*.suo
+*.userprefs
+project.lock.json
+project.fragment.lock.json
+.packages/
+*.nupkg
+*.snupkg
+.nuget/
+
+# Visual Studio
+.vs/
+*.vsidx
+*.VC.db
+*.VC.VC.opendb
+*.opensdf
+*.sdf
+*.cachefile
+*.psess
+*.vsp
+*.vspx
+
+# Test / coverage results
+[Tt]est[Rr]esult*/
+TestResults/
+*.trx
+*.coverage
+*.coverage.xml
+coverage/
+*.opencover.xml
+
+# Logs and local scratch
+*.log
+*.tmp
+*.bak
+.local/
+
+# OS noise
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Local Sovereign runtime data (must never be committed)
+*.sovereign.db
+*.sovereign.db-*
+local-data/
+captures/

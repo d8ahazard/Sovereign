@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Sovereign.Contracts</RootNamespace>
+    <AssemblyName>Sovereign.Contracts</AssemblyName>
+  </PropertyGroup>
+
+</Project>

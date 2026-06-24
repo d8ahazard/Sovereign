@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Sovereign.CLI/Sovereign.CLI.csproj" />
+    <Project Path="src/Sovereign.Contracts/Sovereign.Contracts.csproj" />
+    <Project Path="src/Sovereign.Policy/Sovereign.Policy.csproj" />
+    <Project Path="src/Sovereign.Service/Sovereign.Service.csproj" />
+    <Project Path="src/Sovereign.Storage/Sovereign.Storage.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Sovereign.FailureInjectionTests/Sovereign.FailureInjectionTests.csproj" />
+    <Project Path="tests/Sovereign.IntegrationTests/Sovereign.IntegrationTests.csproj" />
+    <Project Path="tests/Sovereign.SecurityTests/Sovereign.SecurityTests.csproj" />
+    <Project Path="tests/Sovereign.SystemTests/Sovereign.SystemTests.csproj" />
+    <Project Path="tests/Sovereign.UnitTests/Sovereign.UnitTests.csproj" />
+  </Folder>
+</Solution>

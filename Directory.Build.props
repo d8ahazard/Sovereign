@@ -1,0 +1,48 @@
+<Project>
+
+  <!--
+    Repository-wide build defaults for Sovereign.
+
+    These settings enforce the strict build posture required by agent_start.md section 14:
+      - Nullable reference types enabled.
+      - Analyzers enabled.
+      - Deterministic builds.
+      - Warnings treated as errors in production (non-test) projects.
+
+    Test projects opt out of TreatWarningsAsErrors by setting IsTestProject=true, which keeps
+    test ergonomics reasonable without weakening production build strictness.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+
+    <!-- Determinism and reproducibility -->
+    <Deterministic>true</Deterministic>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- Analyzer posture -->
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisMode>Recommended</AnalysisMode>
+    <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
+
+    <!-- Central package management -->
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+
+    <!-- Defaults; overridden per project where appropriate -->
+    <IsPackable>false</IsPackable>
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+
+  <!--
+    NOTE: warnings-as-errors policy that depends on $(IsTestProject) lives in
+    Directory.Build.targets, which is imported AFTER each project sets IsTestProject.
+    Conditions here in .props would evaluate before the project body and always miss.
+  -->
+
+</Project>

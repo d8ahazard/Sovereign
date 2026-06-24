@@ -1,0 +1,506 @@
+**That is the correct product.** Not another “disable 47 registry keys and pray” script, but a local Windows control plane that owns privacy settings, features, updates, and every outbound connection.
+
+Call it **Sovereign** for now. Less marketable than “DeShittifier 11,” but HR departments might install it.
+
+## The core promise
+
+> Windows and installed applications cannot initiate an outbound connection unless an explicit local rule permits it. Unknown connections are blocked before transmission, recorded, and presented for approval.
+
+Everything is stored locally. No account. No cloud service. No telemetry from Sovereign itself. No automatic update checks from Sovereign either, because hypocrisy is already a crowded software category.
+
+## What the control panel should look like
+
+### Dashboard
+
+A simple status screen:
+
+* **Network:** Locked
+* **Windows telemetry:** Disabled
+* **Cloud features:** Removed
+* **AI features:** Removed
+* **Automatic updates:** Blocked
+* **Microsoft account:** Disabled
+* **Last blocked connection:** `svchost.exe → settings-win.data.microsoft.com`
+* **Pending decisions:** 3
+* **System drift:** None
+
+Large mode selector:
+
+* **Locked**
+* **Normal**
+* **Development**
+* **Gaming**
+* **Update Window**
+* **Offline**
+
+“Normal” would still be default-deny. Profiles merely activate different explicit rule sets.
+
+### Connections
+
+A live connection timeline resembling Little Snitch or Portmaster:
+
+```text
+Visual Studio Code
+Code.exe
+Publisher: Microsoft Corporation
+Parent: explorer.exe
+
+Attempted:
+marketplace.visualstudio.com:443
+TCP / IPv4
+
+[Allow Once] [Until App Closes] [Allow This Host]
+[Allow App Anywhere] [Block] [Always Block]
+```
+
+Each request should show:
+
+* Executable path
+* SHA-256 hash
+* Digital-signature publisher
+* Parent process
+* Windows service name, when applicable
+* Destination hostname and IP
+* Port and protocol
+* First-seen and connection count
+* Whether the destination belongs to Microsoft, Google, Amazon, Cloudflare, etc.
+* Why the rule matched or failed
+
+For `svchost.exe`, displaying only “svchost.exe wants the internet” is useless. Sovereign must identify the hosted service, such as `UsoSvc`, `DoSvc`, `NlaSvc`, `W32Time`, or `BITS`.
+
+### Windows Features
+
+Human-readable toggles rather than registry soup:
+
+```text
+Cloud storage
+[Off] OneDrive
+[Off] Windows Backup
+[Off] Known Folder Backup
+
+Connected experiences
+[Off] Settings synchronization
+[Off] Activity history
+[Off] Cloud clipboard
+[Off] Cross-device experiences
+[Off] Phone Link
+
+Advertising
+[Off] Advertising ID
+[Off] Suggested apps
+[Off] Start recommendations
+[Off] Spotlight
+[Off] Search highlights
+
+AI
+[Removed] Copilot
+[Removed] Recall
+[Removed] Click to Do
+[Disabled] Paint generative features
+[Disabled] Photos generative features
+[Disabled] Notepad Rewrite
+
+Location
+[Off] Location service
+[Off] Maps data
+[Off] Geofencing
+```
+
+Each option needs three values, not merely a toggle:
+
+* **Current state**
+* **Desired state**
+* **Enforcement status**
+
+That catches Microsoft quietly restoring something during an update.
+
+### Updates
+
+Windows Update becomes a gated operation:
+
+```text
+Updates are currently blocked.
+
+Last scan: June 20, 2026
+Installed build: 26100.xxxx
+
+[Open Update Window]
+```
+
+Opening the window would:
+
+1. Temporarily start required services.
+2. Temporarily enable only Windows Update, Defender definitions, and optionally driver endpoints.
+3. Scan without installing.
+4. Display available updates.
+5. Let you select what to install.
+6. Install selected updates.
+7. Reboot only after explicit approval.
+8. Close every temporary network rule.
+9. Reapply the desired configuration.
+10. Report anything Microsoft added, restored, or changed.
+
+Windows supports update behavior through Group Policy and related policy interfaces, but policies alone are not the final enforcement mechanism. Sovereign’s firewall rules are what make “not now” actually mean “not now.” ([Microsoft Learn][1])
+
+## The architecture
+
+The application should be split into separate components.
+
+### `Sovereign.UI`
+
+A normal, non-elevated **.NET 10 WinUI 3** application.
+
+Responsibilities:
+
+* Dashboard
+* Connection prompts
+* Settings and profiles
+* Searchable event history
+* Notifications
+* Update selection
+* Rule editing
+* Drift reports
+
+The UI must not run elevated. Windows App SDK notifications do not work from elevated applications, so the pretty user-facing process and privileged controller have to be separate anyway. ([Microsoft Learn][2])
+
+### `Sovereign.Service`
+
+A Windows service running as `LocalSystem`.
+
+Responsibilities:
+
+* Apply machine policies
+* Manage services and scheduled tasks
+* Remove or provision Appx packages
+* Manage optional features
+* Control update services
+* Maintain firewall filters
+* Watch system changes
+* Verify desired state
+* Communicate with the UI through a secured named pipe
+
+The UI asks. The service validates and performs. No random administrative PowerShell window flashing onscreen like it is 2009.
+
+### `Sovereign.Network`
+
+A native C++ library using **Windows Filtering Platform** directly.
+
+WFP is Windows’ supported framework for filtering traffic at multiple layers of the networking stack. Existing software such as simplewall demonstrates that a lightweight application can use WFP independently of the conventional Windows Firewall UI, including logging dropped and allowed traffic. ([Microsoft Learn][3])
+
+The initial implementation should install persistent WFP filters that:
+
+* Block outbound IPv4 and IPv6 by default.
+* Allow loopback.
+* Allow selected LAN ranges.
+* Allow DHCP and local DNS as configured.
+* Allow explicitly approved applications.
+* Block unknown applications.
+* Subscribe to network-drop events.
+* Send blocked attempts to the Windows service.
+* Queue notifications for the UI.
+
+Windows Firewall itself supports default outbound blocking, per-application rules, logging, and scriptable configuration, so it could provide the first prototype. Direct WFP ownership gives us better attribution and more predictable behavior for the finished application. ([Microsoft Learn][4])
+
+## Two ways to handle unknown connections
+
+There is an important engineering choice here.
+
+### Version 1: Block, then ask
+
+An unknown connection is immediately blocked. Sovereign displays:
+
+> `foo.exe attempted to connect to example.com:443`
+
+When you approve it, Sovereign installs a rule. The application retries naturally, or you relaunch it.
+
+Advantages:
+
+* No custom kernel driver.
+* Much safer development.
+* Easier installation.
+* Works with Secure Boot.
+* A blocked connection never leaves the machine.
+* Perfectly sufficient for almost everything.
+
+The only inconvenience is that the first request fails before you approve it.
+
+### Version 2: Pause, ask, then continue
+
+For the full Little Snitch experience, the original connection can be suspended while Sovereign waits for your answer.
+
+That requires a **WFP kernel callout driver** at the ALE authorization layers. WFP explicitly supports postponing a connection decision with `FwpsPendOperation0`, then completing it later after the user chooses allow or block. ([Microsoft Learn][5])
+
+The flow becomes:
+
+```text
+Application calls connect()
+        ↓
+Sovereign driver pauses authorization
+        ↓
+Service receives connection metadata
+        ↓
+UI displays decision prompt
+        ↓
+User selects Allow or Block
+        ↓
+Driver completes the pending operation
+```
+
+That is the ideal behavior, but the driver must be carefully written, tested, and signed. Modern 64-bit Windows generally will not load a new kernel driver under normal Secure Boot conditions unless it has gone through Microsoft’s signing process, which requires Hardware Developer Program enrollment and an EV certificate. ([Microsoft Learn][6])
+
+So the sane progression is:
+
+1. Ship block-then-ask.
+2. Prove the policy engine and UI.
+3. Add the optional signed kernel driver later.
+
+No reason to begin the project by introducing a possible BSOD generator into the networking stack. Human ambition occasionally benefits from adult supervision.
+
+## Rules need to be more expressive than ordinary firewall rules
+
+A rule should be able to say:
+
+```yaml
+application:
+  publisher: Google LLC
+  path: C:\Program Files\Google\Chrome\Application\chrome.exe
+
+network:
+  direction: outbound
+  protocol: tcp
+  remote_port: 443
+
+permission:
+  action: allow
+  lifetime: permanent
+```
+
+Or:
+
+```yaml
+application:
+  service: wuauserv
+
+network:
+  destination_group: microsoft-windows-update
+
+permission:
+  action: allow
+  profile: update-window
+```
+
+Supported lifetimes:
+
+* Once
+* Five minutes
+* Until process exits
+* Until logout
+* Until reboot
+* During selected profile
+* Permanent
+
+Supported scopes:
+
+* This exact executable hash
+* This executable path
+* This signed publisher
+* This Windows service
+* This hostname
+* This domain and subdomains
+* This IP or subnet
+* Any destination
+* LAN only
+* Internet only
+
+Rules based on publisher plus path handle applications that update themselves and consequently change hashes. Hash-only rules would make Chrome, Steam, Discord, NVIDIA, and half the modern desktop beg for permission after every update, which would rapidly teach the user to click “allow” without reading.
+
+## Hostname attribution is the annoying part
+
+The operating system establishes connections to IP addresses, not necessarily hostnames. Sovereign must correlate:
+
+* DNS requests
+* Process IDs
+* DNS answers
+* Connection attempts
+* Cached results
+* Short-lived CDN addresses
+
+For Windows components, Sovereign should force DNS through a local resolver it monitors and disable system-wide encrypted DNS bypasses.
+
+Chrome is a deliberate exception in your model. If you approve `chrome.exe` for arbitrary outbound traffic, Sovereign can tell you Chrome connected somewhere, but it cannot reliably determine which browser tab, extension, service worker, or website initiated every connection. Chrome is effectively the permitted internet tunnel.
+
+Processes such as `GoogleUpdate.exe`, `crashpad_handler.exe`, and other Google helpers remain separate executables and can still be blocked unless explicitly allowed.
+
+## Hardened profiles
+
+### Locked
+
+* Default-deny outbound
+* Only selected applications permitted
+* Windows cloud endpoints blocked
+* Updates blocked
+* Store blocked
+* AI packages blocked
+* LAN access explicitly controlled
+
+### Development
+
+Adds configurable access for:
+
+* Git
+* SSH
+* NuGet
+* npm
+* PyPI
+* Docker
+* WSL
+* Visual Studio
+* VS Code extensions
+* JetBrains
+* GitHub
+* Local development ports
+
+Crucially, allowing `python.exe` globally is dangerous because any Python program then inherits internet access. Sovereign should support interpreter rules tied to:
+
+* Script path
+* Virtual environment
+* Parent process
+* Working directory
+* Destination
+
+### Gaming
+
+Temporarily activates rules for:
+
+* Steam
+* Epic
+* Battle.net
+* Game executables
+* Anti-cheat services
+* Voice chat
+
+It should not interpret “Gaming” as “permit every launcher ever installed to run seventeen background advertising daemons.”
+
+### Update Window
+
+Permits only selected updater processes and destinations for a defined period. The window closes automatically after completion or timeout.
+
+## Policy engine
+
+Every system modification should be represented as a reversible policy operation:
+
+```text
+Policy: Disable Windows Spotlight
+
+Detection:
+  Read current registry and policy state.
+
+Apply:
+  Set required machine and user policies.
+  disable associated scheduled tasks.
+
+Verify:
+  Confirm policy, registry, task, and network state.
+
+Repair:
+  Reapply when drift is detected.
+
+Undo:
+  Restore original recorded state.
+```
+
+That is far safer than a 6,000-line PowerShell script that deletes things and then celebrates because the Start menu still opens.
+
+Policy categories:
+
+* Registry policy
+* Local Group Policy
+* Service configuration
+* Scheduled task
+* Appx package
+* Optional Windows feature
+* Firewall/WFP filter
+* File permission
+* Protocol handler
+* Startup entry
+* Update policy
+* AppLocker rule
+
+AppLocker can enforce packaged-app restrictions on current Windows 11 versions and is the supported Microsoft recommendation for preventing Copilot from being installed or launched now that the older Copilot policy is being deprecated. ([Microsoft Learn][7])
+
+## Drift monitoring
+
+Sovereign should continuously inspect only local state, with no external queries:
+
+* New Appx packages
+* Newly enabled services
+* New scheduled tasks
+* Changed privacy settings
+* New startup entries
+* New firewall filters
+* Re-enabled update services
+* Reinstalled Copilot or Recall components
+* Newly provisioned applications
+* Windows build changes
+
+Example notification:
+
+```text
+Windows changed a protected setting
+
+MicrosoftWindows.Client.WebExperience was provisioned
+after cumulative update KBxxxxxxx.
+
+Sovereign blocked execution and network access.
+
+[Remove Package] [Inspect] [Keep Blocked]
+```
+
+Every action goes into a local append-only event history:
+
+```text
+14:32:04  Windows Update window opened
+14:32:05  wuauserv started
+14:32:05  Temporary network profile activated
+14:36:12  KBxxxxxxx installed
+14:38:51  Copilot package detected
+14:38:51  Copilot execution blocked
+14:38:52  Copilot package removed
+14:39:02  Update profile closed
+```
+
+## What the first release should actually include
+
+A realistic **V1**:
+
+1. .NET 10 WinUI control panel.
+2. Privileged Windows service.
+3. Default-deny outbound filtering.
+4. Blocked-connection notifications.
+5. Per-executable allow/block decisions.
+6. Windows service attribution for `svchost`.
+7. Privacy and cloud-feature policy packs.
+8. Copilot, Recall, OneDrive and consumer-app removal.
+9. Update Window mode.
+10. Drift detection and repair.
+11. Local SQLite event database.
+12. JSON or YAML import/export.
+13. Emergency “restore normal networking” command-line tool.
+14. Absolutely no networking code in Sovereign except traffic inspection and user-commanded update metadata retrieval.
+
+Then:
+
+* **V2:** DNS correlation and hostname-scoped rules.
+* **V3:** updater detection, publisher rules, richer profiles.
+* **V4:** signed WFP callout driver for pause-and-ask connections.
+* **V5:** optional local router observer to independently verify that Windows emitted nothing Sovereign missed.
+
+The important design decision is that Sovereign is not merely a debloater. It is a **desired-state manager plus an application firewall**. Debloating happens once. Preventing Windows from quietly crawling back toward its natural habitat of feeds, clouds, assistants, recommendations, account prompts, and sponsored crap is the actual job.
+
+[1]: https://learn.microsoft.com/en-us/windows/deployment/update/waas-wufb-group-policy?utm_source=chatgpt.com "Configure Windows Update client policies via Group Policy"
+[2]: https://learn.microsoft.com/en-us/windows/apps/develop/notifications/app-notifications/app-notifications-quickstart?utm_source=chatgpt.com "Quickstart: Use app notifications with the Windows App SDK"
+[3]: https://learn.microsoft.com/en-us/windows/win32/fwp/windows-filtering-platform-start-page?utm_source=chatgpt.com "Windows Filtering Platform - Win32 apps"
+[4]: https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/configure-with-command-line?utm_source=chatgpt.com "Manage Windows Firewall With the Command Line"
+[5]: https://learn.microsoft.com/en-us/windows-hardware/drivers/network/processing-classify-callouts-asynchronously?utm_source=chatgpt.com "Processing Classify Callouts Asynchronously"
+[6]: https://learn.microsoft.com/en-us/windows-hardware/drivers/install/kernel-mode-code-signing-policy--windows-vista-and-later-?utm_source=chatgpt.com "Driver Signing Policy - Windows"
+[7]: https://learn.microsoft.com/en-us/windows/security/application-security/application-control/app-control-for-business/applocker/requirements-to-use-applocker?utm_source=chatgpt.com "Requirements to use AppLocker"

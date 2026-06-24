@@ -1,0 +1,61 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{json,yml,yaml}]
+indent_size = 2
+
+[*.{md,markdown}]
+trim_trailing_whitespace = false
+
+[*.{ps1,psm1,psd1}]
+indent_size = 4
+
+[*.{csproj,vcxproj,props,targets,sln}]
+indent_size = 2
+
+[*.cs]
+indent_size = 4
+
+# Language conventions
+# Build-enforced (EnforceCodeStyleInBuild + TreatWarningsAsErrors) -> kept to rules we comply with.
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+csharp_using_directive_placement = outside_namespace:warning
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_prefer_braces = true:warning
+dotnet_style_readonly_field = true:warning
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
+
+# Subjective style rules: surfaced as suggestions only so they never break the build.
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
+dotnet_style_qualification_for_method = false:suggestion
+dotnet_style_qualification_for_event = false:suggestion
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+
+# Treat nullable warnings seriously across the repo
+dotnet_diagnostic.CS8600.severity = error
+dotnet_diagnostic.CS8602.severity = error
+dotnet_diagnostic.CS8603.severity = error
+dotnet_diagnostic.CS8604.severity = error
+dotnet_diagnostic.CS8618.severity = error
+
+# Security-relevant analyzers must not be silently downgraded.
+dotnet_diagnostic.CA2100.severity = error
+dotnet_diagnostic.CA3075.severity = error
+dotnet_diagnostic.CA5350.severity = error
+dotnet_diagnostic.CA5351.severity = error
+
+[tests/**.cs]
+# Tests may use less strict documentation/style; warnings are not errors here.
+dotnet_diagnostic.CS1591.severity = none
+# Method_State_Expected naming is the intended test convention.
+dotnet_diagnostic.CA1707.severity = none

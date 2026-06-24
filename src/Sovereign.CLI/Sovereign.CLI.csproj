@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Sovereign.Cli</RootNamespace>
+    <AssemblyName>sov</AssemblyName>
+    <!--
+      Milestone 0: diagnostics-only CLI. It must use the same service API and authorization
+      model as the UI in later milestones (agent_start.md section 3) and must never become an
+      undocumented bypass. Today it only prints version and usage.
+    -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sovereign.Contracts\Sovereign.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

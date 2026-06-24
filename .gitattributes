@@ -1,0 +1,26 @@
+# Sovereign is a Windows-only project. Normalize text to CRLF in the working tree so it
+# matches .editorconfig (end_of_line = crlf) and keeps `dotnet format` checks consistent
+# across clones. Binary assets are marked explicitly.
+
+* text=auto eol=crlf
+
+*.cs        text eol=crlf
+*.csproj    text eol=crlf
+*.props     text eol=crlf
+*.targets   text eol=crlf
+*.slnx      text eol=crlf
+*.json      text eol=crlf
+*.md        text eol=crlf
+*.ps1       text eol=crlf
+*.psm1      text eol=crlf
+*.psd1      text eol=crlf
+*.yml       text eol=crlf
+*.yaml      text eol=crlf
+*.editorconfig text eol=crlf
+
+# Binary
+*.png       binary
+*.jpg       binary
+*.ico       binary
+*.dll       binary
+*.exe       binary
