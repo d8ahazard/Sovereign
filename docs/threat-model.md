@@ -34,13 +34,13 @@ exists; `Covered` = mitigated with tests.
 | 11 | IPv6 bypasses | Outbound boundary | M3 | Planned |
 | 12 | VPN and virtual adapter behavior | Outbound boundary | M3 | Planned |
 | 13 | WSL, Hyper-V, Docker, container networking | Outbound boundary | M3 | Planned |
-| 14 | Local unprivileged attempts to alter policy | Privilege boundary | M1 | Planned |
+| 14 | Local unprivileged attempts to alter policy | Privilege boundary | M1 | Partial |
 | 15 | Privileged malware | Enforcement integrity | M1+ | Planned |
-| 16 | IPC spoofing or replay | IPC boundary | M1 | Planned |
+| 16 | IPC spoofing or replay | IPC boundary | M1 | Partial |
 | 17 | UI impersonation | User consent | M1/M4 | Planned |
 | 18 | Database tampering or corruption | Audit/rule integrity | M2 | Planned |
 | 19 | Update-window abuse | Update gate | M6 | Planned |
-| 20 | Race conditions on startup/shutdown/upgrade/restart | Enforcement continuity | M1/M3 | Planned |
+| 20 | Race conditions on startup/shutdown/upgrade/restart | Enforcement continuity | M1/M3 | Partial |
 | 21 | Rule drift after Windows updates | Desired state | M5/M6 | Planned |
 | 22 | Recovery-tool abuse | Emergency recovery | M3 | Planned |
 | 23 | Log flooding and notification denial of service | Availability of consent | M4 | Planned |
@@ -58,13 +58,22 @@ are implemented.
 - **Entry point:** the local IPC channel between UI/CLI and the service.
 - **Failure mode:** an unauthorized caller installs an allow rule, disables a policy, or opens
   an update window.
-- **Prevention:** authenticated channel, caller authorization, versioned contracts, rejection
-  of unknown fields/versions where ambiguity could affect security, and replay protection.
-- **Detection:** audit log of every privileged request with caller identity; rejected-request
-  events.
+- **Prevention (implemented in M1):** the pipe is ACL'd at creation via
+  `NamedPipeServerStreamAcl.Create` (LocalSystem/Administrators full control; interactive user
+  read/write without `CreateNewInstance`; no Everyone/Anonymous). Every operation passes an
+  explicit authorization allow-list that fails closed. Protocol versions are negotiated and
+  unknown versions are rejected. The client PID is never used for authorization. See
+  [ADR 0002](decisions/0002-local-ipc-over-secured-named-pipes.md).
+- **Prevention (deferred):** replay protection is not yet required because M1 exposes only
+  idempotent read-only operations; it will be added with the first mutating operation. Cross-user
+  ACL denial is to be proven on a multi-account VM (system test).
+- **Detection:** audit log of connections and denied operations with caller identity; rejected
+  malformed/oversized/unknown-version frames are closed and logged.
 - **Recovery:** reject and log; no state change on failed authorization.
-- **Test coverage:** security tests asserting unauthorized callers cannot invoke privileged
-  operations and that replayed requests are rejected (Milestone 1).
+- **Test coverage (M1):** security tests assert operations outside the allow-list are denied and
+  audited; integration tests assert version negotiation, that UI loss does not change service
+  state, and that committed state persists across restart. Replay and cross-user denial tests
+  arrive with mutating operations and the VM system tier respectively.
 - **Residual risk:** a caller running with equivalent privilege to the service is out of scope
   unless a specific mechanism is added.
 

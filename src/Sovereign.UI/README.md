@@ -1,31 +1,33 @@
-# Sovereign.UI (deferred to Milestone 1)
+# Sovereign.UI
 
-This folder reserves the architecture boundary for the **unelevated .NET 10 WinUI 3** control
-panel described in [`agent_start.md`](../../agent_start.md) section 3.
+The unelevated .NET 10 **WinUI 3** control panel (agent_start.md section 3, ADR 0003).
 
-## Why this is a placeholder in Milestone 0
+## Status (Milestone 1b)
 
-Milestone 0 delivers only the repository foundation and must keep the "clean clone builds"
-gate reliable using the plain `dotnet` toolchain. A WinUI 3 project requires the Windows App
-SDK and additional build components that are introduced deliberately in Milestone 1
-("Service, UI, and IPC skeleton"). Adding it now would expand the build surface without
-delivering Milestone 0 value.
+A minimal shell is implemented: a dashboard that connects to the service over the authenticated
+local IPC client and shows service health plus recent activity, with a friendly offline state when
+the service is not running. It is **unpackaged and self-contained** (ADR 0003).
 
-The friendly-but-powerful design (badges, clickable feature/app cards, profiles, the live
-connection timeline, restore points) is specified in [`docs/ui-design.md`](../../docs/ui-design.md).
+The broader friendly-but-powerful design (clickable feature/app cards, profiles, the live
+connection timeline, restore points) is specified in [`docs/ui-design.md`](../../docs/ui-design.md)
+and lands in later milestones.
 
-## Responsibilities (when implemented)
+## Building
 
-- Dashboard, connection prompts, settings, profiles, searchable event history.
-- Notifications, update selection, rule editing, drift reports.
-- Must run **unelevated**. It must never directly mutate privileged machine state; it asks
-  the service over authenticated local IPC.
+The UI is intentionally excluded from the default solution build and CI gate so that gate stays
+fast and reliable. Build it explicitly (a runtime identifier is required for self-contained WinUI):
+
+```powershell
+scripts\build.ps1 -Full                 # builds the solution + UI (win-x64)
+# or directly:
+dotnet build src\Sovereign.UI\Sovereign.UI.csproj -c Release -r win-x64
+```
 
 ## Constraints
 
-- Windows App SDK notifications do not work from elevated processes, which is one reason the
-  UI and privileged controller are separate processes.
-- Do not let the UI project reference privileged implementation projects directly
-  (`agent_start.md` section 4).
-
-This README is intentionally the only content here until Milestone 1.
+- Runs **unelevated** (`asInvoker`). It never mutates privileged machine state directly; it asks
+  the service over authenticated local IPC (`Sovereign.Ipc`).
+- References only `Sovereign.Ipc` (and `Sovereign.Contracts` transitively), never privileged
+  implementation projects (agent_start.md section 4).
+- App notifications (Milestone 4) require package identity; that migration will be recorded in its
+  own ADR at that time.

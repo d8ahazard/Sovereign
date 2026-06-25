@@ -3,7 +3,7 @@
 Roadmap and gates from [`agent_start.md`](../agent_start.md) section 18. Each milestone has an
 explicit gate; do not advance past a gate by bypassing it.
 
-## Milestone 0: Repository foundation (in progress)
+## Milestone 0: Repository foundation (complete)
 
 Deliverables:
 
@@ -27,14 +27,38 @@ Gate:
 - [x] Unit tests pass.
 - [x] No network access required to run already-restored tests.
 
-## Milestone 1: Service, UI, and IPC skeleton (not started)
+## Milestone 1: Service, UI, and IPC skeleton (complete)
 
 Deliver: installable Windows service; unelevated WinUI shell; authenticated local IPC; health
 status; version negotiation; local event store; CLI diagnostics. UI structure and behavior are
 specified in [`ui-design.md`](ui-design.md).
 
-Gate: unauthorized local process cannot invoke privileged operations; UI loss does not affect
-service state; service restart preserves committed state.
+Decisions: local IPC over secured named pipes ([ADR 0002](decisions/0002-local-ipc-over-secured-named-pipes.md));
+unpackaged self-contained WinUI 3 for V1 ([ADR 0003](decisions/0003-winui3-unpackaged-self-contained-v1.md));
+security basis in [research/2026-06-24-named-pipe-ipc-security.md](research/2026-06-24-named-pipe-ipc-security.md).
+
+Deliverables:
+
+- [x] `Sovereign.Service` hosts a secured named-pipe IPC endpoint (ACL'd via
+      `NamedPipeServerStreamAcl.Create`) and a local SQLite event store.
+- [x] Protocol-version negotiation (`Hello`) that fails closed on no common version.
+- [x] Authorization allow-list (read-only operations only in M1); decisions never use the
+      spoofable client PID.
+- [x] `Sovereign.Ipc` shared client (used by both CLI and UI; references only Contracts).
+- [x] `sov` CLI: `status`, `health`, `events`, `version`.
+- [x] Unelevated, unpackaged, self-contained WinUI 3 shell (dashboard + recent activity).
+- [x] Reversible `install-service.ps1` / `uninstall-service.ps1`; console-mode run for dev.
+
+Gate:
+
+- [x] Unauthorized local process cannot invoke privileged operations (security tests: operations
+      outside the allow-list are denied and audited; no privileged operations exist yet).
+- [x] UI loss does not affect service state (integration test: service survives client
+      disconnect and serves new connections).
+- [x] Service restart preserves committed state (integration test: SQLite events persist across
+      reopen).
+- [ ] Cross-user pipe-ACL denial proven on a multi-account VM (deferred to a system test; see
+      [`test-strategy.md`](test-strategy.md)).
 
 ## Milestone 2: Declarative policy engine (not started)
 

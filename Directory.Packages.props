@@ -17,6 +17,23 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- UI (Sovereign.UI WinUI 3 shell; built via the -Full switch, not in the default gate) -->
+    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Local storage (Sovereign.Storage event store) -->
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.0" />
+    <!--
+      Security override: Microsoft.Data.Sqlite 10.0.0 pulls SQLitePCLRaw.lib.e_sqlite3 2.1.11,
+      whose bundled SQLite (< 3.50.2) is affected by CVE-2025-6965 (GHSA-2m69-gcr7-jv3q). Pin the
+      native binary forward to a patched SQLite build. The sqlite3 C ABI is stable, so only the
+      native library is swapped. Remove this pin once the provider updates its dependency chain.
+    -->
+    <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.50.3" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Test toolchain -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageVersion Include="xunit" Version="2.9.2" />

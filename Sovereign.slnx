@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Sovereign.CLI/Sovereign.CLI.csproj" />
     <Project Path="src/Sovereign.Contracts/Sovereign.Contracts.csproj" />
+    <Project Path="src/Sovereign.Ipc/Sovereign.Ipc.csproj" />
     <Project Path="src/Sovereign.Policy/Sovereign.Policy.csproj" />
     <Project Path="src/Sovereign.Service/Sovereign.Service.csproj" />
     <Project Path="src/Sovereign.Storage/Sovereign.Storage.csproj" />

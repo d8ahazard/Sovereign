@@ -1,14 +1,15 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    Aggregate Milestone 0 verification: format check, build, and unit tests.
+    Aggregate verification: format check, build, and the non-privileged test tiers.
 
 .DESCRIPTION
-    Runs the full non-privileged verification used by the Milestone 0 gate and CI:
+    Runs the full non-privileged verification used by the milestone gates and CI:
       1. dotnet format --verify-no-changes (formatting/style check)
       2. dotnet build (warnings-as-errors in production projects)
-      3. unit tests
-    Performs no privileged action and changes no system state.
+      3. unit, integration, and security tests (in-process; no elevation required)
+    Performs no privileged action and changes no system state. Cross-user pipe-ACL denial is
+    validated separately by a VM/system test (see docs/test-strategy.md).
 
 .PARAMETER Configuration
     The build configuration. Defaults to Release.
@@ -48,9 +49,18 @@ dotnet build $solution -c $Configuration
 if ($LASTEXITCODE -ne 0) { throw "Build failed with exit code $LASTEXITCODE." }
 Write-Host 'Build OK.' -ForegroundColor Green
 
-Write-Host ("Running unit tests ({0})..." -f $Configuration) -ForegroundColor Cyan
-dotnet test (Join-Path $repoRoot 'tests\Sovereign.UnitTests\Sovereign.UnitTests.csproj') -c $Configuration
-if ($LASTEXITCODE -ne 0) { throw "Unit tests failed with exit code $LASTEXITCODE." }
-Write-Host 'Unit tests OK.' -ForegroundColor Green
+$testProjects = @(
+    'tests\Sovereign.UnitTests\Sovereign.UnitTests.csproj',
+    'tests\Sovereign.IntegrationTests\Sovereign.IntegrationTests.csproj',
+    'tests\Sovereign.SecurityTests\Sovereign.SecurityTests.csproj'
+)
 
-Write-Host 'Milestone 0 verification succeeded.' -ForegroundColor Green
+foreach ($project in $testProjects) {
+    $name = [System.IO.Path]::GetFileNameWithoutExtension($project)
+    Write-Host ("Running {0} ({1})..." -f $name, $Configuration) -ForegroundColor Cyan
+    dotnet test (Join-Path $repoRoot $project) -c $Configuration --no-build
+    if ($LASTEXITCODE -ne 0) { throw "$name failed with exit code $LASTEXITCODE." }
+    Write-Host ("{0} OK." -f $name) -ForegroundColor Green
+}
+
+Write-Host 'Verification succeeded.' -ForegroundColor Green

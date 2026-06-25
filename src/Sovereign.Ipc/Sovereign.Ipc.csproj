@@ -1,13 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Sovereign.Storage</RootNamespace>
-    <AssemblyName>Sovereign.Storage</AssemblyName>
+    <RootNamespace>Sovereign.Ipc</RootNamespace>
+    <AssemblyName>Sovereign.Ipc</AssemblyName>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Data.Sqlite" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Sovereign.Contracts\Sovereign.Contracts.csproj" />

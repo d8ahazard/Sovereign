@@ -73,6 +73,7 @@ Copy the block below into a new dated file.
 
 ## Index
 
+- [2026-06-24: Named-pipe IPC security on .NET 10](2026-06-24-named-pipe-ipc-security.md)
 - [2026-06-24: Appx/provisioned-package debloat and its reversibility](2026-06-24-appx-debloat-and-reversibility.md)
 - [2026-06-24: Privacy, policy, and Copilot controls](2026-06-24-privacy-policy-and-copilot-controls.md)
 

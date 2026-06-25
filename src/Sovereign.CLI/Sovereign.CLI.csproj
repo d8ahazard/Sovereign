@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Sovereign.Contracts\Sovereign.Contracts.csproj" />
+    <ProjectReference Include="..\Sovereign.Ipc\Sovereign.Ipc.csproj" />
   </ItemGroup>
 
 </Project>

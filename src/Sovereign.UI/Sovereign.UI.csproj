@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      Milestone 1b: unelevated WinUI 3 shell (ADR 0003). Unpackaged + self-contained so it is a
+      simple xcopy-deployable app. It talks to the service only through the authenticated IPC
+      client and degrades gracefully when the service is unavailable. Built via the -Full switch;
+      it is intentionally not part of the default solution build / CI gate.
+    -->
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>Sovereign.UI</RootNamespace>
+    <AssemblyName>Sovereign.UI</AssemblyName>
+
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <EnableMsixTooling>true</EnableMsixTooling>
+
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <!-- Marks this as the UI project so the strict warnings-as-errors posture is relaxed for
+         generated XAML code-behind (see Directory.Build.targets). -->
+    <IsUiProject>true</IsUiProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sovereign.Ipc\Sovereign.Ipc.csproj" />
+  </ItemGroup>
+
+</Project>

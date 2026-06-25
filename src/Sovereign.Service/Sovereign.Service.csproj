@@ -1,14 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!--
+      Milestone 1: targets net10.0-windows for the named-pipe ACL APIs
+      (NamedPipeServerStreamAcl / PipeSecurity) and Windows-service hosting. The service hosts an
+      authenticated local IPC endpoint and a local SQLite event store. It performs no network,
+      registry, or policy enforcement yet (deferred to later milestones).
+    -->
+    <TargetFramework>net10.0-windows</TargetFramework>
     <OutputType>Exe</OutputType>
     <RootNamespace>Sovereign.Service</RootNamespace>
     <AssemblyName>Sovereign.Service</AssemblyName>
-    <!--
-      Milestone 0: this host builds and idles. It installs nothing, requests no elevation,
-      and performs no privileged action. Windows service installation is introduced in
-      Milestone 1 behind explicit, documented steps.
-    -->
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,7 +19,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Test assemblies exercise internal hosting types (NamedPipeServer, PipeServerOptions). -->
+    <InternalsVisibleTo Include="Sovereign.UnitTests" />
+    <InternalsVisibleTo Include="Sovereign.IntegrationTests" />
+    <InternalsVisibleTo Include="Sovereign.SecurityTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Sovereign.Contracts\Sovereign.Contracts.csproj" />
+    <ProjectReference Include="..\Sovereign.Ipc\Sovereign.Ipc.csproj" />
     <ProjectReference Include="..\Sovereign.Policy\Sovereign.Policy.csproj" />
     <ProjectReference Include="..\Sovereign.Storage\Sovereign.Storage.csproj" />
   </ItemGroup>

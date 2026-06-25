@@ -16,32 +16,41 @@ original product brief is [`instructions.txt`](instructions.txt).
 
 ## Status
 
-**Milestone 0: Repository foundation.** This is scaffolding only. There is no enforcement,
-no privileged behavior, no Windows service installation, and no network code yet. See
-[`docs/milestones.md`](docs/milestones.md) for the roadmap and [`docs/architecture.md`](docs/architecture.md)
-for the intended design.
+**Milestone 1: Service, UI, and IPC skeleton.** There is still no network, registry, or policy
+enforcement (Milestones 2+). What works is the privileged-service backbone: an installable Windows
+service that exposes authenticated local IPC over a secured named pipe, a local SQLite event
+store, a diagnostics CLI, and a minimal WinUI 3 dashboard. See [`docs/milestones.md`](docs/milestones.md)
+for the roadmap and [`docs/architecture.md`](docs/architecture.md) for the design.
 
 What exists today:
 
-- Solution and project boundaries for the managed components.
-- Strict build configuration (nullable, analyzers, warnings-as-errors in production).
-- A non-privileged unit test suite proving fail-closed contract defaults.
-- Build/test/verify scripts and CI.
-- Foundational documentation, threat-model draft, ADR and research templates.
+- A Windows service hosting an ACL'd named-pipe IPC endpoint with protocol-version negotiation and
+  an allow-list of read-only operations (no privileged operations yet). See
+  [ADR 0002](docs/decisions/0002-local-ipc-over-secured-named-pipes.md).
+- A shared IPC client (`Sovereign.Ipc`) used by both the CLI and the UI.
+- A local, versioned, append-only SQLite event store that persists across restarts.
+- `sov` CLI: `status`, `health`, `events`, `version`.
+- An unelevated, unpackaged, self-contained WinUI 3 dashboard ([ADR 0003](docs/decisions/0003-winui3-unpackaged-self-contained-v1.md)).
+- Reversible service install/uninstall scripts.
+- Strict build configuration, a fail-closed contract test suite, and unit/integration/security
+  tiers, plus build/test/verify scripts and CI.
 
 ## Supported systems
 
 - **Target framework:** .NET 10 (`net10.0`).
 - **Intended platform:** Windows 11 (supported editions/builds to be enumerated as policies
   are verified; unsupported builds are reported, never guessed).
-- The UI (`Sovereign.UI`, WinUI 3) and native networking component (`Sovereign.Network`, WFP)
-  are deferred to later milestones and exist only as documented placeholders.
+- The UI (`Sovereign.UI`, WinUI 3) is a minimal shell built via the `-Full` switch; the native
+  networking component (`Sovereign.Network`, WFP) is deferred to Milestone 3 and exists only as a
+  documented placeholder.
 
-## Known limitations (Milestone 0)
+## Known limitations (Milestone 1)
 
 - No outbound filtering, notifications, policies, or drift detection are implemented.
-- The Windows service host builds and idles; it does not install or enforce anything.
-- The CLI prints version/help only.
+- The service exposes only read-only IPC operations; it makes no registry, service, task, Appx, or
+  network change.
+- Cross-user pipe-ACL denial is validated by design and unit tests but not yet by a multi-account
+  VM system test.
 
 ## Prerequisites
 
@@ -54,10 +63,24 @@ What exists today:
 
 ```powershell
 # From the repository root:
-./scripts/bootstrap.ps1   # verify prerequisites + restore
-./scripts/build.ps1       # build the managed solution (Release)
-./scripts/test.ps1        # run non-privileged unit tests
-./scripts/verify.ps1      # format check + build + unit tests (the Milestone 0 gate)
+./scripts/bootstrap.ps1        # verify prerequisites + restore
+./scripts/build.ps1            # build the managed solution (Release)
+./scripts/build.ps1 -Full      # also build the self-contained WinUI 3 UI (win-x64)
+./scripts/test.ps1             # run non-privileged unit tests
+./scripts/verify.ps1           # format check + build + unit/integration/security tests (the gate)
+```
+
+Run the service and talk to it:
+
+```powershell
+# Development (foreground, no install):
+dotnet run --project src/Sovereign.Service
+# In another terminal:
+dotnet run --project src/Sovereign.CLI -- status
+
+# Or install as a Windows service (elevated):
+./scripts/install-service.ps1
+./scripts/uninstall-service.ps1
 ```
 
 Or directly with the .NET CLI:
@@ -70,16 +93,16 @@ dotnet test tests/Sovereign.UnitTests/Sovereign.UnitTests.csproj -c Release
 ## Layout
 
 ```text
-src/        Managed components (Contracts, Policy, Storage, Service, CLI) + UI/Network placeholders
-tests/      Unit (active) + integration/system/security/failure-injection (scaffolds)
+src/        Managed components (Contracts, Ipc, Policy, Storage, Service, CLI, UI) + Network placeholder
+tests/      Unit/integration/security (active) + system/failure-injection (scaffolds)
 docs/       Architecture, threat model, test strategy, milestones, decisions, research, runbooks
-scripts/    bootstrap / build / test / verify / restore-network
+scripts/    bootstrap / build / test / verify / install-service / uninstall-service / restore-network
 tools/      Lab, packet-capture, and policy-fixture placeholders
 ```
 
 ## Design and research
 
-Forward-looking design and research groundwork (guides Milestones 1 and 5; not yet implemented):
+Design and research groundwork (guides current and later milestones):
 
 - [`docs/ui-design.md`](docs/ui-design.md) - friendly-but-powerful control panel spec.
 - [`docs/debloat-catalog.md`](docs/debloat-catalog.md) - comprehensive candidate list of apps,

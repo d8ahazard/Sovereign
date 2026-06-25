@@ -4,18 +4,27 @@ This document summarizes Sovereign's security model and non-goals. The binding r
 are in [`agent_start.md`](agent_start.md); this file must describe **current** behavior, not
 aspirational behavior.
 
-## Current security posture (Milestone 0)
+## Current security posture (Milestone 1)
 
-Milestone 0 is repository scaffolding. It implements **no enforcement** and performs **no
-privileged action**. Specifically, nothing in this repository today:
+Milestone 1 delivers the privileged-service backbone and authenticated local IPC, but still
+implements **no enforcement**. Specifically, nothing in this repository today:
 
 - modifies Windows Firewall or WFP state,
-- installs or runs a Windows service with elevated privileges,
-- requests elevation,
 - changes the registry,
 - removes Windows packages or disables services,
 - adds a kernel driver, or
 - contacts the internet at runtime.
+
+What the service does do in Milestone 1:
+
+- It can be installed as a Windows service (running as LocalSystem) via the documented, reversible
+  `install-service.ps1` / `uninstall-service.ps1` scripts, or run in the foreground for
+  development. Installation alone uses Manual start and changes nothing else.
+- It exposes a single local named pipe, `\\.\pipe\Sovereign.Ipc`, secured with an explicit ACL at
+  creation (`NamedPipeServerStreamAcl.Create`). Only read-only operations are on the authorization
+  allow-list; there are no privileged/mutating operations yet. Authorization never trusts the
+  spoofable client PID (see [ADR 0002](docs/decisions/0002-local-ipc-over-secured-named-pipes.md)).
+- It maintains a local SQLite event store under `%ProgramData%\Sovereign`.
 
 The only network activity is the standard one-time NuGet restore during build, which is a
 developer/CI action, not product runtime behavior.
@@ -50,7 +59,7 @@ When implemented (see [`docs/architecture.md`](docs/architecture.md) and
 
 ## Supported versions
 
-Milestone 0 is pre-release; there are no supported released versions yet. A support policy
+Milestone 1 is pre-release; there are no supported released versions yet. A support policy
 will be published with the first release.
 
 ## Reporting a vulnerability

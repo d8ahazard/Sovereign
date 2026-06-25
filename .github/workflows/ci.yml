@@ -44,3 +44,9 @@ jobs:
 
       - name: Unit tests
         run: dotnet test tests/Sovereign.UnitTests/Sovereign.UnitTests.csproj -c Release --no-build
+
+      - name: Integration tests
+        run: dotnet test tests/Sovereign.IntegrationTests/Sovereign.IntegrationTests.csproj -c Release --no-build
+
+      - name: Security tests
+        run: dotnet test tests/Sovereign.SecurityTests/Sovereign.SecurityTests.csproj -c Release --no-build
