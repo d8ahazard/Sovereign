@@ -30,7 +30,12 @@
                     SelectionChanged="OnNavSelectionChanged">
 
         <NavigationView.MenuItems>
-            <NavigationViewItem Content="Dashboard" Tag="dashboard" IsSelected="True">
+            <NavigationViewItem Content="Get started" Tag="getstarted" IsSelected="True">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE8FD;" />
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="Dashboard" Tag="dashboard">
                 <NavigationViewItem.Icon>
                     <FontIcon Glyph="&#xE80F;" />
                 </NavigationViewItem.Icon>

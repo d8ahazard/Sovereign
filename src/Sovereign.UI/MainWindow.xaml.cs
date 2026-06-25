@@ -26,7 +26,7 @@ public sealed partial class MainWindow : Window
         this.ExtendsContentIntoTitleBar = true;
         this.SetTitleBar(this.AppTitleBar);
         this.TrySetIcon();
-        this.ContentFrame.Navigate(typeof(DashboardPage));
+        this.ContentFrame.Navigate(typeof(WizardPage));
         _ = this.UpdateConnectionAsync();
     }
 
@@ -55,6 +55,7 @@ public sealed partial class MainWindow : Window
 
         Type page = tag switch
         {
+            "getstarted" => typeof(WizardPage),
             "cleanup" => typeof(CleanupPage),
             "apps" => typeof(AppsPage),
             "events" => typeof(EventsPage),
@@ -71,11 +72,19 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>Navigates the content frame to the cleanup page (used by dashboard quick actions).</summary>
-    public void NavigateToCleanup()
+    public void NavigateToCleanup() => this.SelectNav("cleanup");
+
+    /// <summary>Navigates to the dashboard (used to leave the setup wizard).</summary>
+    public void NavigateToDashboard() => this.SelectNav("dashboard");
+
+    /// <summary>Navigates to the restore points page.</summary>
+    public void NavigateToRestore() => this.SelectNav("restore");
+
+    private void SelectNav(string tag)
     {
         foreach (object menuItem in this.Nav.MenuItems)
         {
-            if (menuItem is NavigationViewItem { Tag: "cleanup" } item)
+            if (menuItem is NavigationViewItem item && (item.Tag as string) == tag)
             {
                 this.Nav.SelectedItem = item;
                 return;

@@ -19,11 +19,11 @@
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
             <StackPanel Margin="24,40,16,0" Spacing="6">
                 <TextBlock Text="Set up Sovereign" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16" />
-                <TextBlock x:Name="Rail0" Text="1   Welcome" Padding="8,8" CornerRadius="6" />
-                <TextBlock x:Name="Rail1" Text="2   Privacy &amp; cleanup" Padding="8,8" CornerRadius="6" />
-                <TextBlock x:Name="Rail2" Text="3   Remove bloat" Padding="8,8" CornerRadius="6" />
-                <TextBlock x:Name="Rail3" Text="4   Review" Padding="8,8" CornerRadius="6" />
-                <TextBlock x:Name="Rail4" Text="5   All done" Padding="8,8" CornerRadius="6" />
+                <TextBlock x:Name="Rail0" Text="1   Welcome" Padding="4,6" />
+                <TextBlock x:Name="Rail1" Text="2   Privacy &amp; cleanup" Padding="4,6" />
+                <TextBlock x:Name="Rail2" Text="3   Remove bloat" Padding="4,6" />
+                <TextBlock x:Name="Rail3" Text="4   Review" Padding="4,6" />
+                <TextBlock x:Name="Rail4" Text="5   All done" Padding="4,6" />
             </StackPanel>
         </Border>
 
