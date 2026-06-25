@@ -2,10 +2,10 @@
 
   <PropertyGroup>
     <!--
-      Milestone 1: targets net10.0-windows for the named-pipe ACL APIs
-      (NamedPipeServerStreamAcl / PipeSecurity) and Windows-service hosting. The service hosts an
-      authenticated local IPC endpoint and a local SQLite event store. It performs no network,
-      registry, or policy enforcement yet (deferred to later milestones).
+      Targets net10.0-windows for the named-pipe ACL APIs (NamedPipeServerStreamAcl / PipeSecurity)
+      and Windows-service hosting. Hosts an authenticated local IPC endpoint, a local SQLite event
+      and restore-point store, and the declarative policy engine over an in-memory sandbox provider
+      (Milestone 2). It performs no real network, registry, or Appx changes yet.
     -->
     <TargetFramework>net10.0-windows</TargetFramework>
     <OutputType>Exe</OutputType>

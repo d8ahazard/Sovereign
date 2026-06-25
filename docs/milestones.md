@@ -60,13 +60,39 @@ Gate:
 - [ ] Cross-user pipe-ACL denial proven on a multi-account VM (deferred to a system test; see
       [`test-strategy.md`](test-strategy.md)).
 
-## Milestone 2: Declarative policy engine (not started)
+## Milestone 2: Declarative policy engine (complete)
 
 Deliver: policy contracts; detection; plan preview; apply; verify; rollback; audit; initial
 harmless test policies.
 
-Gate: partial failure rolls back safely; `Unknown` never reports compliant; repeated apply is
-idempotent.
+Decision: declarative setting-based policy engine with a provider seam, engine-orchestrated
+transactional apply, and capture-before-change restore points
+([ADR 0004](decisions/0004-declarative-setting-based-policy-engine.md)). Policies act only on a
+harmless in-memory sandbox provider in M2; real registry/Appx providers arrive in M5 behind the
+same seam.
+
+Deliverables:
+
+- [x] Policy contract (`IPolicy` + `PolicyMetadata`): id, version, title, description, risk,
+      scope, reboot/logoff, declarative desired settings; results use `PolicyResultState`.
+- [x] `PolicyEngine` deriving detect/plan/apply/verify/repair/rollback generically (`Sovereign.Policy`).
+- [x] Plan preview (`PlanPolicy`) and detection (`DetectPolicy`) over IPC; read-only.
+- [x] Transactional apply with capture-before-change and independent verification.
+- [x] Rollback to the last restore point; restore points persisted in SQLite
+      (`SqliteRestorePointStore`).
+- [x] Audit of every operation with a per-execution correlation id; mutating IPC operations
+      (`ApplyPolicy`/`RollbackPolicy`) audited with the caller identity.
+- [x] Initial harmless demo policies (`DemoPolicies`) operating on the in-memory sandbox.
+- [x] `sov policy list|detect|plan|apply|rollback` commands.
+
+Gate:
+
+- [x] Partial failure rolls back safely (unit test: a write fails mid-apply; all changes are
+      restored and the result is never compliant).
+- [x] `Unknown` never reports compliant (unit tests: provider read failure -> `Unknown`;
+      unsupported -> `Unsupported`; neither is treated as compliant).
+- [x] Repeated apply is idempotent (unit + IPC end-to-end test: the second apply is a no-op that
+      reports `Compliant`).
 
 ## Milestone 3: Network enforcement prototype (not started)
 

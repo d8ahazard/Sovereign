@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using Sovereign.Contracts;
 using Sovereign.Contracts.Ipc;
 using Sovereign.Ipc;
+using Sovereign.Policy;
 using Sovereign.Service;
 using Sovereign.Storage;
 using Xunit;
@@ -22,15 +24,20 @@ public sealed class IpcEndToEndTests : IAsyncLifetime
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"sovereign-ipc-{Guid.NewGuid():N}.db");
     private readonly CancellationTokenSource _cts = new();
     private SqliteEventStore _store = null!;
+    private SqliteRestorePointStore _restore = null!;
     private NamedPipeServer _server = null!;
 
     public async Task InitializeAsync()
     {
         this._store = new SqliteEventStore(this._dbPath);
         await this._store.InitializeAsync(CancellationToken.None);
+        this._restore = new SqliteRestorePointStore(this._dbPath);
+        await this._restore.InitializeAsync(CancellationToken.None);
 
         var runtime = new ServiceRuntime();
-        var dispatcher = new IpcDispatcher(this._store, runtime, new AuthorizationPolicy(), NullLogger<IpcDispatcher>.Instance);
+        var catalog = new PolicyCatalog(DemoPolicies.CreateDefault());
+        var engine = new PolicyEngine(new InMemorySettingProvider(), this._restore, this._store);
+        var dispatcher = new IpcDispatcher(this._store, runtime, new AuthorizationPolicy(), engine, catalog, NullLogger<IpcDispatcher>.Instance);
         this._server = new NamedPipeServer(
             new PipeServerOptions { PipeName = this._pipeName },
             dispatcher,
@@ -75,6 +82,39 @@ public sealed class IpcEndToEndTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Policy_PlanApplyDetectRollback_RoundTripsOverIpc()
+    {
+        await using IpcClient client = await this.ConnectAsync();
+
+        PolicyListResult list = await client.ListPoliciesAsync();
+        Assert.NotEmpty(list.Policies);
+        string id = list.Policies[0].Id;
+
+        // Initially non-compliant with a non-empty plan.
+        PolicyDetectResult before = await client.DetectPolicyAsync(id);
+        Assert.Equal(PolicyResultState.NonCompliant, before.State);
+        PolicyPlanInfo plan = await client.PlanPolicyAsync(id);
+        Assert.NotEmpty(plan.Changes);
+
+        // Apply succeeds and the policy becomes compliant.
+        PolicyRunResult applied = await client.ApplyPolicyAsync(id);
+        Assert.Equal(PolicyResultState.Applied, applied.State);
+        PolicyDetectResult afterApply = await client.DetectPolicyAsync(id);
+        Assert.Equal(PolicyResultState.Compliant, afterApply.State);
+
+        // Re-applying is idempotent (no-op compliant).
+        PolicyRunResult reapplied = await client.ApplyPolicyAsync(id);
+        Assert.Equal(PolicyResultState.Compliant, reapplied.State);
+        Assert.Empty(reapplied.Changes);
+
+        // Rollback restores the captured original state, so the policy is non-compliant again.
+        PolicyRunResult rolledBack = await client.RollbackPolicyAsync(id);
+        Assert.Equal(PolicyResultState.Applied, rolledBack.State);
+        PolicyDetectResult afterRollback = await client.DetectPolicyAsync(id);
+        Assert.Equal(PolicyResultState.NonCompliant, afterRollback.State);
+    }
+
+    [Fact]
     public async Task ServiceSurvivesClientDisconnect_NewClientStillWorks()
     {
         // First client connects and disconnects (simulating the UI going away).
@@ -101,6 +141,7 @@ public sealed class IpcEndToEndTests : IAsyncLifetime
         {
         }
 
+        await this._restore.DisposeAsync();
         await this._store.DisposeAsync();
         this._cts.Dispose();
 

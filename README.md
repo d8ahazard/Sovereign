@@ -16,20 +16,25 @@ original product brief is [`instructions.txt`](instructions.txt).
 
 ## Status
 
-**Milestone 1: Service, UI, and IPC skeleton.** There is still no network, registry, or policy
-enforcement (Milestones 2+). What works is the privileged-service backbone: an installable Windows
-service that exposes authenticated local IPC over a secured named pipe, a local SQLite event
-store, a diagnostics CLI, and a minimal WinUI 3 dashboard. See [`docs/milestones.md`](docs/milestones.md)
-for the roadmap and [`docs/architecture.md`](docs/architecture.md) for the design.
+**Milestone 2: Declarative policy engine.** There is still no network enforcement (M3) and no real
+registry/Appx changes yet (real policy providers land in M5). What works is the privileged-service
+backbone plus a transactional, reversible policy engine acting on a harmless in-memory sandbox. See
+[`docs/milestones.md`](docs/milestones.md) for the roadmap and
+[`docs/architecture.md`](docs/architecture.md) for the design.
 
 What exists today:
 
-- A Windows service hosting an ACL'd named-pipe IPC endpoint with protocol-version negotiation and
-  an allow-list of read-only operations (no privileged operations yet). See
-  [ADR 0002](docs/decisions/0002-local-ipc-over-secured-named-pipes.md).
+- A Windows service hosting an ACL'd named-pipe IPC endpoint with protocol-version negotiation and a
+  fail-closed allow-list. See [ADR 0002](docs/decisions/0002-local-ipc-over-secured-named-pipes.md).
+- A declarative policy engine (`Sovereign.Policy`) with detect / plan / apply / verify / rollback,
+  transactional capture-before-change, idempotent apply, and `Unknown`-never-compliant semantics.
+  Apply/rollback are the first mutating IPC operations and are audited with the caller identity. See
+  [ADR 0004](docs/decisions/0004-declarative-setting-based-policy-engine.md). In M2 policies act only
+  on an in-memory sandbox; real registry/Appx providers arrive in M5 behind the same seam.
 - A shared IPC client (`Sovereign.Ipc`) used by both the CLI and the UI.
-- A local, versioned, append-only SQLite event store that persists across restarts.
-- `sov` CLI: `status`, `health`, `events`, `version`.
+- A local, versioned, append-only SQLite event store plus restore-point storage; both persist across
+  restarts.
+- `sov` CLI: `status`, `health`, `events`, `version`, and `policy list|detect|plan|apply|rollback`.
 - An unelevated, unpackaged, self-contained WinUI 3 dashboard ([ADR 0003](docs/decisions/0003-winui3-unpackaged-self-contained-v1.md)).
 - Reversible service install/uninstall scripts.
 - Strict build configuration, a fail-closed contract test suite, and unit/integration/security
@@ -44,11 +49,11 @@ What exists today:
   networking component (`Sovereign.Network`, WFP) is deferred to Milestone 3 and exists only as a
   documented placeholder.
 
-## Known limitations (Milestone 1)
+## Known limitations (Milestone 2)
 
-- No outbound filtering, notifications, policies, or drift detection are implemented.
-- The service exposes only read-only IPC operations; it makes no registry, service, task, Appx, or
-  network change.
+- No outbound filtering, notifications, or drift detection are implemented.
+- Policies act only on an in-memory sandbox provider; the service makes no real registry, service,
+  task, Appx, or network change yet (real providers land in M5).
 - Cross-user pipe-ACL denial is validated by design and unit tests but not yet by a multi-account
   VM system test.
 
@@ -77,6 +82,10 @@ Run the service and talk to it:
 dotnet run --project src/Sovereign.Service
 # In another terminal:
 dotnet run --project src/Sovereign.CLI -- status
+dotnet run --project src/Sovereign.CLI -- policy list
+dotnet run --project src/Sovereign.CLI -- policy plan demo.telemetry-off
+dotnet run --project src/Sovereign.CLI -- policy apply demo.telemetry-off
+dotnet run --project src/Sovereign.CLI -- policy rollback demo.telemetry-off
 
 # Or install as a Windows service (elevated):
 ./scripts/install-service.ps1

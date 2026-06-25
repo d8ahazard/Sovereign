@@ -6,8 +6,9 @@ namespace Sovereign.Ipc;
 
 /// <summary>
 /// Client for the local named-pipe IPC channel. Connects, negotiates a protocol version, and
-/// issues read-only operations (Milestone 1). Used by both the UI and the CLI so neither
-/// references privileged projects directly (agent_start.md section 4, ADR 0002).
+/// issues read-only and policy operations (list/detect/plan/apply/rollback). Used by both the UI
+/// and the CLI so neither references privileged projects directly (agent_start.md section 4,
+/// ADR 0002).
 /// </summary>
 public sealed class IpcClient : IAsyncDisposable
 {
@@ -114,6 +115,60 @@ public sealed class IpcClient : IAsyncDisposable
             cancellationToken).ConfigureAwait(false);
         ThrowIfError(response);
         return response.Events ?? new QueryEventsResponse(Array.Empty<EventRecord>());
+    }
+
+    /// <summary>Lists the managed policies.</summary>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    public async Task<PolicyListResult> ListPoliciesAsync(CancellationToken cancellationToken = default)
+    {
+        ResponseEnvelope response = await SendAsync(
+            new RequestEnvelope(this.NextId(), IpcOperation.ListPolicies, Query: null), cancellationToken).ConfigureAwait(false);
+        ThrowIfError(response);
+        return response.Policies ?? new PolicyListResult(Array.Empty<PolicyInfo>());
+    }
+
+    /// <summary>Detects the current state of a policy.</summary>
+    /// <param name="policyId">The policy id.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    public async Task<PolicyDetectResult> DetectPolicyAsync(string policyId, CancellationToken cancellationToken = default)
+    {
+        ResponseEnvelope response = await SendAsync(
+            new RequestEnvelope(this.NextId(), IpcOperation.DetectPolicy, Query: null, new PolicyTargetRequest(policyId)), cancellationToken).ConfigureAwait(false);
+        ThrowIfError(response);
+        return response.Detect ?? throw new IpcException("Service returned no detect payload.");
+    }
+
+    /// <summary>Returns a plan preview for a policy.</summary>
+    /// <param name="policyId">The policy id.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    public async Task<PolicyPlanInfo> PlanPolicyAsync(string policyId, CancellationToken cancellationToken = default)
+    {
+        ResponseEnvelope response = await SendAsync(
+            new RequestEnvelope(this.NextId(), IpcOperation.PlanPolicy, Query: null, new PolicyTargetRequest(policyId)), cancellationToken).ConfigureAwait(false);
+        ThrowIfError(response);
+        return response.Plan ?? throw new IpcException("Service returned no plan payload.");
+    }
+
+    /// <summary>Applies a policy (mutating).</summary>
+    /// <param name="policyId">The policy id.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    public async Task<PolicyRunResult> ApplyPolicyAsync(string policyId, CancellationToken cancellationToken = default)
+    {
+        ResponseEnvelope response = await SendAsync(
+            new RequestEnvelope(this.NextId(), IpcOperation.ApplyPolicy, Query: null, new PolicyTargetRequest(policyId)), cancellationToken).ConfigureAwait(false);
+        ThrowIfError(response);
+        return response.PolicyRun ?? throw new IpcException("Service returned no policy-run payload.");
+    }
+
+    /// <summary>Rolls a policy back to its last restore point (mutating).</summary>
+    /// <param name="policyId">The policy id.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    public async Task<PolicyRunResult> RollbackPolicyAsync(string policyId, CancellationToken cancellationToken = default)
+    {
+        ResponseEnvelope response = await SendAsync(
+            new RequestEnvelope(this.NextId(), IpcOperation.RollbackPolicy, Query: null, new PolicyTargetRequest(policyId)), cancellationToken).ConfigureAwait(false);
+        ThrowIfError(response);
+        return response.PolicyRun ?? throw new IpcException("Service returned no policy-run payload.");
     }
 
     private async Task<ResponseEnvelope> SendAsync(RequestEnvelope request, CancellationToken cancellationToken)

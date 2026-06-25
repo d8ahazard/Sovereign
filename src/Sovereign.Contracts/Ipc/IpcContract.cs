@@ -38,6 +38,21 @@ public enum IpcOperation
 
     /// <summary>Returns recent audit events (see <see cref="QueryEventsRequest"/>).</summary>
     QueryEvents,
+
+    /// <summary>Returns the list of managed policies. Read-only.</summary>
+    ListPolicies,
+
+    /// <summary>Detects the current state of a policy. Read-only.</summary>
+    DetectPolicy,
+
+    /// <summary>Returns a plan preview for a policy. Read-only.</summary>
+    PlanPolicy,
+
+    /// <summary>Applies a policy (capture-before-change, transactional). Mutating.</summary>
+    ApplyPolicy,
+
+    /// <summary>Rolls a policy back to its last restore point. Mutating.</summary>
+    RollbackPolicy,
 }
 
 /// <summary>

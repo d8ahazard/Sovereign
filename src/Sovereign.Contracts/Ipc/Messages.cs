@@ -64,7 +64,12 @@ public sealed record QueryEventsResponse(IReadOnlyList<EventRecord> Events);
 /// <param name="RequestId">Client-assigned id echoed back in the response.</param>
 /// <param name="Operation">The requested operation.</param>
 /// <param name="Query">Payload for <see cref="IpcOperation.QueryEvents"/>; otherwise null.</param>
-public sealed record RequestEnvelope(long RequestId, IpcOperation Operation, QueryEventsRequest? Query);
+/// <param name="PolicyTarget">Payload for policy detect/plan/apply/rollback operations; otherwise null.</param>
+public sealed record RequestEnvelope(
+    long RequestId,
+    IpcOperation Operation,
+    QueryEventsRequest? Query,
+    PolicyTargetRequest? PolicyTarget = null);
 
 /// <summary>
 /// The envelope for an operation response.
@@ -75,10 +80,18 @@ public sealed record RequestEnvelope(long RequestId, IpcOperation Operation, Que
 /// <param name="Health">Payload for <see cref="IpcOperation.GetHealth"/>; otherwise null.</param>
 /// <param name="Events">Payload for <see cref="IpcOperation.QueryEvents"/>; otherwise null.</param>
 /// <param name="Version">Payload for <see cref="IpcOperation.GetVersion"/>; otherwise null.</param>
+/// <param name="Policies">Payload for <see cref="IpcOperation.ListPolicies"/>; otherwise null.</param>
+/// <param name="Plan">Payload for <see cref="IpcOperation.PlanPolicy"/>; otherwise null.</param>
+/// <param name="Detect">Payload for <see cref="IpcOperation.DetectPolicy"/>; otherwise null.</param>
+/// <param name="PolicyRun">Payload for <see cref="IpcOperation.ApplyPolicy"/>/<see cref="IpcOperation.RollbackPolicy"/>; otherwise null.</param>
 public sealed record ResponseEnvelope(
     long RequestId,
     IpcErrorCode ErrorCode,
     string? Message,
     HealthStatus? Health,
     QueryEventsResponse? Events,
-    string? Version);
+    string? Version,
+    PolicyListResult? Policies = null,
+    PolicyPlanInfo? Plan = null,
+    PolicyDetectResult? Detect = null,
+    PolicyRunResult? PolicyRun = null);

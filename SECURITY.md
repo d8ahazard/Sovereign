@@ -4,10 +4,10 @@ This document summarizes Sovereign's security model and non-goals. The binding r
 are in [`agent_start.md`](agent_start.md); this file must describe **current** behavior, not
 aspirational behavior.
 
-## Current security posture (Milestone 1)
+## Current security posture (Milestone 2)
 
-Milestone 1 delivers the privileged-service backbone and authenticated local IPC, but still
-implements **no enforcement**. Specifically, nothing in this repository today:
+Milestone 2 adds a declarative policy engine on top of the M1 backbone, but it still makes **no
+real machine changes**. Specifically, nothing in this repository today:
 
 - modifies Windows Firewall or WFP state,
 - changes the registry,
@@ -15,16 +15,22 @@ implements **no enforcement**. Specifically, nothing in this repository today:
 - adds a kernel driver, or
 - contacts the internet at runtime.
 
-What the service does do in Milestone 1:
+What the service does do in Milestone 2:
 
 - It can be installed as a Windows service (running as LocalSystem) via the documented, reversible
   `install-service.ps1` / `uninstall-service.ps1` scripts, or run in the foreground for
   development. Installation alone uses Manual start and changes nothing else.
 - It exposes a single local named pipe, `\\.\pipe\Sovereign.Ipc`, secured with an explicit ACL at
-  creation (`NamedPipeServerStreamAcl.Create`). Only read-only operations are on the authorization
-  allow-list; there are no privileged/mutating operations yet. Authorization never trusts the
-  spoofable client PID (see [ADR 0002](docs/decisions/0002-local-ipc-over-secured-named-pipes.md)).
-- It maintains a local SQLite event store under `%ProgramData%\Sovereign`.
+  creation (`NamedPipeServerStreamAcl.Create`). The authorization allow-list now includes the first
+  **mutating** operations, `ApplyPolicy` and `RollbackPolicy`; these stay behind the ACL'd pipe and
+  are audited with the caller's Windows identity. Authorization never trusts the spoofable client
+  PID (see [ADR 0002](docs/decisions/0002-local-ipc-over-secured-named-pipes.md)).
+- It runs a transactional, reversible policy engine
+  ([ADR 0004](docs/decisions/0004-declarative-setting-based-policy-engine.md)) that acts only on a
+  harmless **in-memory sandbox** provider. Apply captures original state before changing anything and
+  rolls back on failure; restore points are persisted locally. Real registry/Appx providers arrive in
+  Milestone 5.
+- It maintains a local SQLite event store and restore-point store under `%ProgramData%\Sovereign`.
 
 The only network activity is the standard one-time NuGet restore during build, which is a
 developer/CI action, not product runtime behavior.
@@ -59,7 +65,7 @@ When implemented (see [`docs/architecture.md`](docs/architecture.md) and
 
 ## Supported versions
 
-Milestone 1 is pre-release; there are no supported released versions yet. A support policy
+Milestone 2 is pre-release; there are no supported released versions yet. A support policy
 will be published with the first release.
 
 ## Reporting a vulnerability

@@ -11,16 +11,19 @@ namespace Sovereign.Service;
 /// </summary>
 internal sealed partial class StorageInitializer(
     IEventStore eventStore,
+    IRestorePointStore restorePointStore,
     ServiceRuntime runtime,
     ILogger<StorageInitializer> logger) : IHostedService
 {
     private readonly IEventStore _eventStore = eventStore;
+    private readonly IRestorePointStore _restorePointStore = restorePointStore;
     private readonly ServiceRuntime _runtime = runtime;
     private readonly ILogger<StorageInitializer> _logger = logger;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         await this._eventStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        await this._restorePointStore.InitializeAsync(cancellationToken).ConfigureAwait(false);
         await this._eventStore.AppendAsync("service.start", $"Service started (version {this._runtime.Version}).", cancellationToken).ConfigureAwait(false);
         LogInitialized(this._logger, ServicePaths.DatabasePath);
     }

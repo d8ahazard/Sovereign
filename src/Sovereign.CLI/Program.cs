@@ -1,11 +1,12 @@
 using System.Globalization;
 using System.Reflection;
+using Sovereign.Contracts;
 using Sovereign.Contracts.Ipc;
 using Sovereign.Ipc;
 
-// Milestone 1 diagnostics CLI. Read-only commands that go through the same authenticated IPC
-// channel and authorization model as the UI (agent_start.md section 3). It is never a privileged
-// bypass: it can only invoke operations the service's allow-list permits.
+// Sovereign diagnostics and policy CLI. Commands go through the same authenticated IPC channel and
+// authorization model as the UI (agent_start.md section 3). It is never a privileged bypass: it can
+// only invoke operations the service's allow-list permits.
 
 string cliVersion = Assembly.GetExecutingAssembly()
     .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
@@ -35,6 +36,9 @@ switch (command)
 
     case "events":
         return await RunEventsAsync(args).ConfigureAwait(false);
+
+    case "policy":
+        return await RunPolicyAsync(args).ConfigureAwait(false);
 
     default:
         Console.Error.WriteLine($"Unknown command: {command}");
@@ -93,6 +97,119 @@ static async Task<int> RunEventsAsync(string[] args)
     }).ConfigureAwait(false);
 }
 
+static async Task<int> RunPolicyAsync(string[] args)
+{
+    string sub = args.Length > 1 ? args[1].ToLowerInvariant() : "list";
+
+    switch (sub)
+    {
+        case "list":
+            return await WithClientAsync(async client =>
+            {
+                PolicyListResult result = await client.ListPoliciesAsync().ConfigureAwait(false);
+                if (result.Policies.Count == 0)
+                {
+                    Console.WriteLine("No policies.");
+                    return 0;
+                }
+
+                foreach (PolicyInfo p in result.Policies)
+                {
+                    Console.WriteLine($"{p.Id,-32} [{p.RiskLevel,-6}] {p.Title}");
+                    Console.WriteLine($"  {p.Description}");
+                }
+
+                return 0;
+            }).ConfigureAwait(false);
+
+        case "detect":
+        case "plan":
+        case "apply":
+        case "rollback":
+            string? id = args.Length > 2 ? args[2] : null;
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                Console.Error.WriteLine($"Usage: sov policy {sub} <policy-id>");
+                return 1;
+            }
+
+            return await RunPolicyTargetAsync(sub, id).ConfigureAwait(false);
+
+        default:
+            Console.Error.WriteLine($"Unknown policy subcommand: {sub}");
+            PrintUsage();
+            return 1;
+    }
+}
+
+static async Task<int> RunPolicyTargetAsync(string sub, string id)
+{
+    return await WithClientAsync(async client =>
+    {
+        switch (sub)
+        {
+            case "detect":
+                {
+                    PolicyDetectResult result = await client.DetectPolicyAsync(id).ConfigureAwait(false);
+                    Console.WriteLine($"{result.PolicyId}: {result.State}");
+                    return 0;
+                }
+
+            case "plan":
+                {
+                    PolicyPlanInfo plan = await client.PlanPolicyAsync(id).ConfigureAwait(false);
+                    if (plan.Changes.Count == 0)
+                    {
+                        Console.WriteLine($"{plan.PolicyId}: already compliant; no changes.");
+                        return 0;
+                    }
+
+                    Console.WriteLine($"{plan.PolicyId}: {plan.Changes.Count} change(s):");
+                    foreach (PolicyChangeInfo c in plan.Changes)
+                    {
+                        Console.WriteLine($"  {c.Key}: {Show(c.From)} -> {Show(c.To)}  ({c.Explanation})");
+                    }
+
+                    return 0;
+                }
+
+            case "apply":
+                {
+                    PolicyRunResult result = await client.ApplyPolicyAsync(id).ConfigureAwait(false);
+                    return ReportRun("apply", result);
+                }
+
+            case "rollback":
+                {
+                    PolicyRunResult result = await client.RollbackPolicyAsync(id).ConfigureAwait(false);
+                    return ReportRun("rollback", result);
+                }
+
+            default:
+                return 1;
+        }
+    }).ConfigureAwait(false);
+}
+
+static int ReportRun(string verb, PolicyRunResult result)
+{
+    Console.WriteLine($"{result.PolicyId}: {verb} -> {result.State} (correlation {result.CorrelationId})");
+    foreach (PolicyChangeInfo c in result.Changes)
+    {
+        Console.WriteLine($"  {c.Key}: {Show(c.From)} -> {Show(c.To)}");
+    }
+
+    if (!string.IsNullOrEmpty(result.FailureDetail))
+    {
+        Console.WriteLine($"  detail: {result.FailureDetail}");
+    }
+
+    // Treat any non-success terminal state as a non-zero exit so scripts can detect failure.
+    return result.State is PolicyResultState.Applied or PolicyResultState.Compliant ? 0 : 3;
+}
+
+static string Show(string? value) => value is null ? "(absent)" : $"\"{value}\"";
+
 static async Task<int> WithClientAsync(Func<IpcClient, Task<int>> action)
 {
     try
@@ -137,8 +254,13 @@ static void PrintUsage()
     Console.WriteLine("  sov health                 Show service health (uptime, event count).");
     Console.WriteLine("  sov events [--limit N]     List recent audit events.");
     Console.WriteLine("             [--after ID]");
+    Console.WriteLine("  sov policy list            List managed policies.");
+    Console.WriteLine("  sov policy detect <id>     Show the current state of a policy.");
+    Console.WriteLine("  sov policy plan <id>       Preview the changes a policy would make.");
+    Console.WriteLine("  sov policy apply <id>      Apply a policy (transactional, reversible).");
+    Console.WriteLine("  sov policy rollback <id>   Roll a policy back to its last restore point.");
     Console.WriteLine("  sov version                Print the CLI version.");
     Console.WriteLine("  sov help                   Show this help.");
     Console.WriteLine();
-    Console.WriteLine("All commands are read-only and go through the authenticated local IPC channel.");
+    Console.WriteLine("Commands go through the authenticated local IPC channel; apply/rollback are audited.");
 }

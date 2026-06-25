@@ -3,25 +3,26 @@
 This document describes Sovereign's components, trust boundaries, and intended data flow. It
 reflects the design mandated by [`agent_start.md`](../agent_start.md) sections 3 and 16.
 
-> **Status note (through Milestone 1):** The service now hosts authenticated local IPC over a
-> secured named pipe and a local SQLite event store, the CLI and a minimal WinUI 3 shell talk to
-> it through a shared IPC client, and version negotiation is in place. No policy, registry, or
-> network enforcement exists yet (Milestones 2+). The UI is built via the `-Full` switch and is
-> not in the default gate. This document describes the target design; where a piece is not yet
-> implemented it is marked.
+> **Status note (through Milestone 2):** The service hosts authenticated local IPC over a secured
+> named pipe, a local SQLite event and restore-point store, and a declarative policy engine that
+> acts on a harmless in-memory sandbox provider. The CLI and a minimal WinUI 3 shell talk to it
+> through a shared IPC client, and version negotiation is in place. No real registry, Appx, or
+> network changes occur yet (real policy providers land in M5; network enforcement in M3). The UI
+> is built via the `-Full` switch and is not in the default gate. This document describes the target
+> design; where a piece is not yet implemented it is marked.
 
 ## Components
 
 | Component | Process / form | Privilege | Status | Responsibility |
 |-----------|----------------|-----------|--------|----------------|
 | `Sovereign.UI` | WinUI 3 app (unpackaged, self-contained) | Unelevated | Minimal shell (M1b) | Dashboard, prompts, settings, history, notifications, update selection, rule editing, drift reports. Never mutates privileged state directly. |
-| `Sovereign.Service` | Windows Service (`net10.0-windows`) | Minimum necessary (LocalSystem) | IPC + event store (M1) | Applies policies, manages services/tasks/Appx/features, controls updates, maintains filters, verifies state. Exposes authenticated local IPC. |
-| `Sovereign.Ipc` | Library | n/a | Implemented (M1) | Named-pipe framing, version negotiation, and the IPC client used by UI and CLI. References only `Sovereign.Contracts`. |
+| `Sovereign.Service` | Windows Service (`net10.0-windows`) | Minimum necessary (LocalSystem) | IPC + stores + policy engine (M2) | Applies policies, manages services/tasks/Appx/features, controls updates, maintains filters, verifies state. Exposes authenticated local IPC. |
+| `Sovereign.Ipc` | Library | n/a | Implemented (M1+M2 ops) | Named-pipe framing, version negotiation, and the IPC client (read-only + policy list/detect/plan/apply/rollback) used by UI and CLI. References only `Sovereign.Contracts`. |
 | `Sovereign.Network` | Native WFP component | In-service / system | Placeholder (M3) | Default-deny outbound filtering via Windows Filtering Platform; drop-event capture; block-first notification. No kernel driver in V1. |
-| `Sovereign.Policy` | Library | n/a | Contract only | Declarative, idempotent, reversible, verifiable desired-state policies. |
-| `Sovereign.Storage` | Library (SQLite) | n/a | Event store (M1) | Local, versioned, append-only event/decision/audit storage. |
-| `Sovereign.Contracts` | Library | n/a | Types + IPC DTOs | Shared, infrastructure-independent contracts (states, decisions, IPC messages). |
-| `Sovereign.CLI` | Console (`sov`) | Same as UI | `status`/`health`/`events`/`version` | Local administration, diagnostics, export, emergency recovery via the same service API and authorization model. |
+| `Sovereign.Policy` | Library | n/a | Engine + demo policies (M2) | Declarative, idempotent, reversible, verifiable desired-state policies; the `PolicyEngine` orchestrates transactional apply/rollback over an `ISettingProvider` seam. Real providers in M5. |
+| `Sovereign.Storage` | Library (SQLite) | n/a | Event + restore-point store (M2) | Local, versioned, append-only event/decision/audit storage and capture-before-change restore points. |
+| `Sovereign.Contracts` | Library | n/a | Types + IPC DTOs | Shared, infrastructure-independent contracts (states, decisions, IPC + policy messages). |
+| `Sovereign.CLI` | Console (`sov`) | Same as UI | diagnostics + `policy` commands | Local administration, diagnostics, export, emergency recovery via the same service API and authorization model. |
 
 ## Trust boundaries
 
@@ -97,11 +98,33 @@ and the [named-pipe security research](research/2026-06-24-named-pipe-ipc-securi
   (never `CreateNewInstance`); Everyone/Anonymous get nothing. The account the server runs under is
   also granted control of its own pipe so it can create additional instances.
 - Each connection negotiates a protocol version (`Hello`); no common version fails closed.
-- Every operation passes an explicit authorization allow-list. Milestone 1 exposes only read-only
-  operations (`Ping`, `GetHealth`, `GetVersion`, `QueryEvents`). Decisions never rely on the
-  spoofable client PID; the caller's Windows identity is captured for auditing.
+- Every operation passes an explicit authorization allow-list. Milestone 2 adds policy operations:
+  read-only `ListPolicies`/`DetectPolicy`/`PlanPolicy` and the first **mutating** operations,
+  `ApplyPolicy`/`RollbackPolicy`. Mutating operations stay behind the same ACL'd pipe and are
+  audited with the caller's Windows identity. Decisions never rely on the spoofable client PID.
 - Framing is length-prefixed JSON with a hard size bound (local DoS guard).
 
-`Sovereign.Storage` provides the local SQLite event store (schema versioned via `PRAGMA
-user_version`, migrated forward on startup). Committed events persist across service restarts. No
-registry, service, task, Appx, or network change is performed yet.
+`Sovereign.Storage` provides the local SQLite event store and restore-point store (events are
+versioned via `PRAGMA user_version`; both tables are created on startup). Committed events and
+restore points persist across service restarts.
+
+## Policy engine (Milestone 2 reality)
+
+`Sovereign.Policy` implements a declarative, setting-based engine
+([ADR 0004](decisions/0004-declarative-setting-based-policy-engine.md)). A policy is metadata plus a
+list of desired settings; the `PolicyEngine` derives all behavior generically against an
+`ISettingProvider`:
+
+- **Detect/Plan:** compare current vs desired. All match -> `Compliant`; any differ ->
+  `NonCompliant`; a provider read failure -> `Unknown`; unsupported -> `Unsupported`. `Unknown` and
+  `Unsupported` are never treated as compliant.
+- **Apply (transactional, capture-before-change):** snapshot each target's original value, persist a
+  restore point, apply each change, verify each change and then the whole policy independently. On
+  any failure, restore every captured value and verify the restore. Success -> `Applied`; a verify
+  failure that was rolled back -> `VerificationFailed`; a failed rollback -> `RollbackFailed`. Apply
+  is idempotent: an already-compliant policy is a no-op that reports `Compliant`.
+- **Rollback:** restore the latest persisted restore point and verify.
+
+In Milestone 2 the only provider is a harmless in-memory sandbox (`InMemorySettingProvider`), so no
+real machine state changes. Real registry/Appx providers arrive in Milestone 5 behind the same
+`ISettingProvider` seam, reusing the engine and its tests unchanged.

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Sovereign.Contracts.Ipc;
+using Sovereign.Policy;
 using Sovereign.Service;
 using Sovereign.Storage;
 using Xunit;
@@ -8,9 +9,9 @@ namespace Sovereign.SecurityTests;
 
 /// <summary>
 /// Security tests for the IPC authorization boundary (agent_start.md sections 7 and 15.2,
-/// ADR 0002). Operations outside the explicit allow-list must be denied (fail closed), and the
-/// denial must be audited. Milestone 1 has no privileged operations, so any operation not on the
-/// read-only allow-list stands in for an attempted privileged call.
+/// ADR 0002). Operations outside the explicit allow-list must be denied (fail closed) and audited.
+/// Milestone 2 adds mutating operations (ApplyPolicy/RollbackPolicy); these stay behind the allow-list
+/// and must be audited with the caller identity.
 /// </summary>
 public sealed class AuthorizationDenialTests : IDisposable
 {
@@ -58,6 +59,22 @@ public sealed class AuthorizationDenialTests : IDisposable
         Assert.False(string.IsNullOrEmpty(response.Version));
     }
 
+    [Fact]
+    public async Task Dispatch_MutatingApplyOperation_IsAuditedWithCaller()
+    {
+        await using SqliteEventStore store = await this.CreateStoreAsync();
+        IpcDispatcher dispatcher = CreateDispatcher(store);
+
+        string policyId = DemoPolicies.CreateDefault()[0].Metadata.Id;
+        var request = new RequestEnvelope(1, IpcOperation.ApplyPolicy, Query: null, new PolicyTargetRequest(policyId));
+        ResponseEnvelope response = await dispatcher.DispatchAsync(request, new CallerContext("auditor"), CancellationToken.None);
+
+        Assert.Equal(IpcErrorCode.None, response.ErrorCode);
+
+        IReadOnlyList<EventRecord> events = await store.QueryAsync(100, afterId: null, CancellationToken.None);
+        Assert.Contains(events, e => e.Category == "policy.apply.requested" && e.Message.Contains("auditor", StringComparison.Ordinal));
+    }
+
     private async Task<SqliteEventStore> CreateStoreAsync()
     {
         var store = new SqliteEventStore(this._dbPath);
@@ -65,8 +82,12 @@ public sealed class AuthorizationDenialTests : IDisposable
         return store;
     }
 
-    private static IpcDispatcher CreateDispatcher(IEventStore store) =>
-        new(store, new ServiceRuntime(), new AuthorizationPolicy(), NullLogger<IpcDispatcher>.Instance);
+    private static IpcDispatcher CreateDispatcher(IEventStore store)
+    {
+        var catalog = new PolicyCatalog(DemoPolicies.CreateDefault());
+        var engine = new PolicyEngine(new InMemorySettingProvider(), new InMemoryRestorePointStore(), store);
+        return new IpcDispatcher(store, new ServiceRuntime(), new AuthorizationPolicy(), engine, catalog, NullLogger<IpcDispatcher>.Instance);
+    }
 
     public void Dispose()
     {

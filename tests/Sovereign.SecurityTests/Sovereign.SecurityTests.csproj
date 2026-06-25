@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Sovereign.Contracts\Sovereign.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Sovereign.Ipc\Sovereign.Ipc.csproj" />
+    <ProjectReference Include="..\..\src\Sovereign.Policy\Sovereign.Policy.csproj" />
     <ProjectReference Include="..\..\src\Sovereign.Storage\Sovereign.Storage.csproj" />
     <ProjectReference Include="..\..\src\Sovereign.Service\Sovereign.Service.csproj" />
   </ItemGroup>

@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Logging;
+using Sovereign.Contracts;
 using Sovereign.Contracts.Ipc;
+using Sovereign.Policy;
 using Sovereign.Storage;
 
 namespace Sovereign.Service;
@@ -13,11 +15,15 @@ public sealed partial class IpcDispatcher(
     IEventStore eventStore,
     ServiceRuntime runtime,
     AuthorizationPolicy authorization,
+    PolicyEngine policyEngine,
+    PolicyCatalog policyCatalog,
     ILogger<IpcDispatcher> logger)
 {
     private readonly IEventStore _eventStore = eventStore;
     private readonly ServiceRuntime _runtime = runtime;
     private readonly AuthorizationPolicy _authorization = authorization;
+    private readonly PolicyEngine _policyEngine = policyEngine;
+    private readonly PolicyCatalog _policyCatalog = policyCatalog;
     private readonly ILogger<IpcDispatcher> _logger = logger;
 
     /// <summary>
@@ -47,6 +53,11 @@ public sealed partial class IpcDispatcher(
                 IpcOperation.GetVersion => Ok(request.RequestId) with { Version = this._runtime.Version },
                 IpcOperation.GetHealth => Ok(request.RequestId) with { Health = await this.BuildHealthAsync(cancellationToken).ConfigureAwait(false) },
                 IpcOperation.QueryEvents => Ok(request.RequestId) with { Events = await this.QueryEventsAsync(request.Query, cancellationToken).ConfigureAwait(false) },
+                IpcOperation.ListPolicies => Ok(request.RequestId) with { Policies = this.ListPolicies() },
+                IpcOperation.DetectPolicy => await this.DetectPolicyAsync(request, cancellationToken).ConfigureAwait(false),
+                IpcOperation.PlanPolicy => await this.PlanPolicyAsync(request, cancellationToken).ConfigureAwait(false),
+                IpcOperation.ApplyPolicy => await this.ApplyPolicyAsync(request, caller, cancellationToken).ConfigureAwait(false),
+                IpcOperation.RollbackPolicy => await this.RollbackPolicyAsync(request, caller, cancellationToken).ConfigureAwait(false),
                 _ => Error(request.RequestId, IpcErrorCode.UnknownOperation, "Unknown operation."),
             };
         }
@@ -79,6 +90,79 @@ public sealed partial class IpcDispatcher(
         long? afterId = query?.AfterId;
         IReadOnlyList<EventRecord> events = await this._eventStore.QueryAsync(limit, afterId, cancellationToken).ConfigureAwait(false);
         return new QueryEventsResponse(events);
+    }
+
+    private PolicyListResult ListPolicies()
+    {
+        PolicyInfo[] infos = this._policyCatalog.All.Select(PolicyMapper.ToInfo).ToArray();
+        return new PolicyListResult(infos);
+    }
+
+    private async Task<ResponseEnvelope> DetectPolicyAsync(RequestEnvelope request, CancellationToken cancellationToken)
+    {
+        if (!this.TryResolvePolicy(request, out IPolicy? policy, out ResponseEnvelope? error))
+        {
+            return error!;
+        }
+
+        PolicyResultState state = await this._policyEngine.DetectAsync(policy!, cancellationToken).ConfigureAwait(false);
+        return Ok(request.RequestId) with { Detect = new PolicyDetectResult(policy!.Metadata.Id, state) };
+    }
+
+    private async Task<ResponseEnvelope> PlanPolicyAsync(RequestEnvelope request, CancellationToken cancellationToken)
+    {
+        if (!this.TryResolvePolicy(request, out IPolicy? policy, out ResponseEnvelope? error))
+        {
+            return error!;
+        }
+
+        PolicyPlan plan = await this._policyEngine.PlanAsync(policy!, cancellationToken).ConfigureAwait(false);
+        return Ok(request.RequestId) with { Plan = PolicyMapper.ToPlan(plan) };
+    }
+
+    private async Task<ResponseEnvelope> ApplyPolicyAsync(RequestEnvelope request, CallerContext caller, CancellationToken cancellationToken)
+    {
+        if (!this.TryResolvePolicy(request, out IPolicy? policy, out ResponseEnvelope? error))
+        {
+            return error!;
+        }
+
+        await this.TryAuditAsync("policy.apply.requested", $"ApplyPolicy {policy!.Metadata.Id} requested by {caller.UserNameOrUnknown}.", cancellationToken).ConfigureAwait(false);
+        PolicyExecutionReport report = await this._policyEngine.ApplyAsync(policy!, cancellationToken).ConfigureAwait(false);
+        return Ok(request.RequestId) with { PolicyRun = PolicyMapper.ToRun(report) };
+    }
+
+    private async Task<ResponseEnvelope> RollbackPolicyAsync(RequestEnvelope request, CallerContext caller, CancellationToken cancellationToken)
+    {
+        if (!this.TryResolvePolicy(request, out IPolicy? policy, out ResponseEnvelope? error))
+        {
+            return error!;
+        }
+
+        await this.TryAuditAsync("policy.rollback.requested", $"RollbackPolicy {policy!.Metadata.Id} requested by {caller.UserNameOrUnknown}.", cancellationToken).ConfigureAwait(false);
+        PolicyExecutionReport report = await this._policyEngine.RollbackAsync(policy!.Metadata.Id, cancellationToken).ConfigureAwait(false);
+        return Ok(request.RequestId) with { PolicyRun = PolicyMapper.ToRun(report) };
+    }
+
+    private bool TryResolvePolicy(RequestEnvelope request, out IPolicy? policy, out ResponseEnvelope? error)
+    {
+        policy = null;
+        error = null;
+
+        string? policyId = request.PolicyTarget?.PolicyId;
+        if (string.IsNullOrWhiteSpace(policyId))
+        {
+            error = Error(request.RequestId, IpcErrorCode.BadRequest, "A policy id is required.");
+            return false;
+        }
+
+        if (!this._policyCatalog.TryGet(policyId, out policy) || policy is null)
+        {
+            error = Error(request.RequestId, IpcErrorCode.BadRequest, $"Unknown policy id '{policyId}'.");
+            return false;
+        }
+
+        return true;
     }
 
     private async Task TryAuditAsync(string category, string message, CancellationToken cancellationToken)
