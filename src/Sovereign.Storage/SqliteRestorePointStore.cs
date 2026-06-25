@@ -139,6 +139,40 @@ public sealed class SqliteRestorePointStore : IRestorePointStore, IAsyncDisposab
         }
     }
 
+    /// <inheritdoc />
+    public async ValueTask<IReadOnlyList<RestorePoint>> QueryAsync(int limit, CancellationToken cancellationToken)
+    {
+        int clamped = Math.Clamp(limit, 1, 500);
+
+        await this._gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            SqliteConnection connection = this.RequireConnection();
+            await using SqliteCommand command = connection.CreateCommand();
+            command.CommandText =
+                "SELECT id, policy_id, correlation_id, created_utc, payload_json FROM restore_points ORDER BY id DESC LIMIT $limit;";
+            command.Parameters.AddWithValue("$limit", clamped);
+
+            var results = new List<RestorePoint>();
+            await using SqliteDataReader reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                long id = reader.GetInt64(0);
+                string pid = reader.GetString(1);
+                string cid = reader.GetString(2);
+                DateTimeOffset created = DateTimeOffset.Parse(reader.GetString(3), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+                string payload = reader.GetString(4);
+                results.Add(new RestorePoint(id, pid, cid, created, payload));
+            }
+
+            return results;
+        }
+        finally
+        {
+            this._gate.Release();
+        }
+    }
+
     private SqliteConnection RequireConnection() =>
         this._connection ?? throw new InvalidOperationException("The restore-point store has not been initialized. Call InitializeAsync first.");
 

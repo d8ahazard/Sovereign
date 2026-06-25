@@ -12,6 +12,8 @@ namespace Sovereign.Contracts.Ipc;
 /// <param name="RiskLevel">The policy's risk level.</param>
 /// <param name="Scope">Whether the policy is machine- or user-scoped.</param>
 /// <param name="RequiresReboot">Whether applying may require a reboot.</param>
+/// <param name="Level">The hardening preset this policy belongs to.</param>
+/// <param name="Category">A short grouping label for the UI (for example, "Privacy").</param>
 public sealed record PolicyInfo(
     string Id,
     int Version,
@@ -19,7 +21,9 @@ public sealed record PolicyInfo(
     string Description,
     PolicyRiskLevel RiskLevel,
     PolicyScope Scope,
-    bool RequiresReboot);
+    bool RequiresReboot,
+    PolicyLevel Level = PolicyLevel.Normal,
+    string Category = "General");
 
 /// <summary>
 /// The list of available policies.
@@ -72,3 +76,18 @@ public sealed record PolicyRunResult(
 /// </summary>
 /// <param name="PolicyId">The target policy id.</param>
 public sealed record PolicyTargetRequest(string PolicyId);
+
+/// <summary>
+/// A persisted restore point that a policy can be rolled back to.
+/// </summary>
+/// <param name="Id">Monotonic local identifier.</param>
+/// <param name="PolicyId">The policy this restore point belongs to.</param>
+/// <param name="CorrelationId">Correlation id of the apply that created it.</param>
+/// <param name="CreatedUtc">When the restore point was captured.</param>
+public sealed record RestorePointInfo(long Id, string PolicyId, string CorrelationId, DateTimeOffset CreatedUtc);
+
+/// <summary>
+/// The list of recent restore points the service has captured.
+/// </summary>
+/// <param name="RestorePoints">The restore points, most recent first.</param>
+public sealed record RestorePointListResult(IReadOnlyList<RestorePointInfo> RestorePoints);

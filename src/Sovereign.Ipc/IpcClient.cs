@@ -171,6 +171,58 @@ public sealed class IpcClient : IAsyncDisposable
         return response.PolicyRun ?? throw new IpcException("Service returned no policy-run payload.");
     }
 
+    /// <summary>Lists the most recent restore points the service has captured.</summary>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    public async Task<RestorePointListResult> ListRestorePointsAsync(CancellationToken cancellationToken = default)
+    {
+        ResponseEnvelope response = await SendAsync(
+            new RequestEnvelope(this.NextId(), IpcOperation.ListRestorePoints, Query: null), cancellationToken).ConfigureAwait(false);
+        ThrowIfError(response);
+        return response.RestorePoints ?? new RestorePointListResult(Array.Empty<RestorePointInfo>());
+    }
+
+    /// <summary>Lists installed apps (Appx/MSIX packages) for review and removal.</summary>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    public async Task<AppListResult> ListAppsAsync(CancellationToken cancellationToken = default)
+    {
+        ResponseEnvelope response = await SendAsync(
+            new RequestEnvelope(this.NextId(), IpcOperation.ListApps, Query: null), cancellationToken).ConfigureAwait(false);
+        ThrowIfError(response);
+        return response.Apps ?? new AppListResult(Array.Empty<AppInfo>());
+    }
+
+    /// <summary>Removes an installed app for all users (mutating).</summary>
+    /// <param name="packageFullName">The package full name to remove.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    public async Task<AppActionResult> RemoveAppAsync(string packageFullName, CancellationToken cancellationToken = default)
+    {
+        ResponseEnvelope response = await SendAsync(
+            new RequestEnvelope(this.NextId(), IpcOperation.RemoveApp, Query: null, AppTarget: new AppTargetRequest(packageFullName)), cancellationToken).ConfigureAwait(false);
+        ThrowIfError(response);
+        return response.AppAction ?? throw new IpcException("Service returned no app-action payload.");
+    }
+
+    /// <summary>Lists installed classic (Win32) programs for review and removal.</summary>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    public async Task<AppListResult> ListProgramsAsync(CancellationToken cancellationToken = default)
+    {
+        ResponseEnvelope response = await SendAsync(
+            new RequestEnvelope(this.NextId(), IpcOperation.ListPrograms, Query: null), cancellationToken).ConfigureAwait(false);
+        ThrowIfError(response);
+        return response.Apps ?? new AppListResult(Array.Empty<AppInfo>());
+    }
+
+    /// <summary>Uninstalls a classic (Win32) program via its registered uninstaller (mutating).</summary>
+    /// <param name="programId">The program id from <see cref="ListProgramsAsync"/>.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    public async Task<AppActionResult> RemoveProgramAsync(string programId, CancellationToken cancellationToken = default)
+    {
+        ResponseEnvelope response = await SendAsync(
+            new RequestEnvelope(this.NextId(), IpcOperation.RemoveProgram, Query: null, AppTarget: new AppTargetRequest(programId)), cancellationToken).ConfigureAwait(false);
+        ThrowIfError(response);
+        return response.AppAction ?? throw new IpcException("Service returned no app-action payload.");
+    }
+
     private async Task<ResponseEnvelope> SendAsync(RequestEnvelope request, CancellationToken cancellationToken)
     {
         try

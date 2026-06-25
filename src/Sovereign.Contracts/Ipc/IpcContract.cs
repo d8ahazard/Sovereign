@@ -53,6 +53,21 @@ public enum IpcOperation
 
     /// <summary>Rolls a policy back to its last restore point. Mutating.</summary>
     RollbackPolicy,
+
+    /// <summary>Returns recent restore points the service has captured. Read-only.</summary>
+    ListRestorePoints,
+
+    /// <summary>Returns the installed apps (Appx/MSIX packages). Read-only.</summary>
+    ListApps,
+
+    /// <summary>Removes an installed app for all users (and deprovisions it). Mutating.</summary>
+    RemoveApp,
+
+    /// <summary>Returns the installed classic (Win32) programs. Read-only.</summary>
+    ListPrograms,
+
+    /// <summary>Uninstalls a classic (Win32) program via its registered uninstaller. Mutating.</summary>
+    RemoveProgram,
 }
 
 /// <summary>

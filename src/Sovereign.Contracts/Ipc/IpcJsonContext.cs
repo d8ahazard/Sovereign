@@ -25,6 +25,12 @@ namespace Sovereign.Contracts.Ipc;
 [JsonSerializable(typeof(PolicyDetectResult))]
 [JsonSerializable(typeof(PolicyRunResult))]
 [JsonSerializable(typeof(PolicyTargetRequest))]
+[JsonSerializable(typeof(RestorePointInfo))]
+[JsonSerializable(typeof(RestorePointListResult))]
+[JsonSerializable(typeof(AppInfo))]
+[JsonSerializable(typeof(AppListResult))]
+[JsonSerializable(typeof(AppActionResult))]
+[JsonSerializable(typeof(AppTargetRequest))]
 public sealed partial class IpcJsonContext : JsonSerializerContext
 {
 }

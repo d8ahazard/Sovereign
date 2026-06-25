@@ -85,8 +85,9 @@ public sealed class AuthorizationDenialTests : IDisposable
     private static IpcDispatcher CreateDispatcher(IEventStore store)
     {
         var catalog = new PolicyCatalog(DemoPolicies.CreateDefault());
-        var engine = new PolicyEngine(new InMemorySettingProvider(), new InMemoryRestorePointStore(), store);
-        return new IpcDispatcher(store, new ServiceRuntime(), new AuthorizationPolicy(), engine, catalog, NullLogger<IpcDispatcher>.Instance);
+        var restore = new InMemoryRestorePointStore();
+        var engine = new PolicyEngine(new InMemorySettingProvider(), restore, store);
+        return new IpcDispatcher(store, new ServiceRuntime(), new AuthorizationPolicy(), engine, catalog, restore, new AppxManager(NullLogger<AppxManager>.Instance), new Win32ProgramManager(NullLogger<Win32ProgramManager>.Instance), NullLogger<IpcDispatcher>.Instance);
     }
 
     public void Dispose()

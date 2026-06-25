@@ -38,10 +38,27 @@ Badges are clickable; clicking opens the relevant detail or the explanation view
 
 ## Navigation
 
-Left nav rail: **Dashboard**, **Connections**, **Features**, **Apps** (debloat), **Profiles**,
-**Updates**, **Events**, **Restore points**, **Settings**.
+Left nav rail: **Dashboard**, **Connections**, **Firewall**, **Features**, **Apps** (debloat),
+**Network profiles**, **Updates**, **Events**, **Restore points**, **Settings**. A **Setup wizard**
+entry point (also auto-launched on first run) is pinned at the top; see
+[`setup-wizard-design.md`](setup-wizard-design.md).
+
+> **Two distinct axes — do not conflate (see [ADR 0005](decisions/0005-hardening-presets-and-guided-setup.md)):**
+> **Network profiles** (Locked / Normal / Development / Gaming / Update Window / Offline) choose
+> which outbound allow rule sets are active over default-deny. **Hardening level** (Lite / Normal /
+> Pro) chooses how much cloud/AI/bloat/UX cleanup is selected by default. Both default to Normal and
+> are independent. The nav item is named **Network profiles** to keep this clear.
 
 ## Screens
+
+### Setup wizard (first run + re-runnable)
+
+A guided, Windows 11-style flow that reviews the machine and applies a clearly-shown, reversible
+set of changes: choose a **hardening level** (Lite / Normal / Pro), review existing firewall rules,
+disable Microsoft cloud services via preset **square tiles**, debloat preinstalled apps from a live
+inventory, restore Windows 11 UX regressions, then review an exact diff and apply (one restore
+point). It is the guided front-end over the same engine and toggles as Features/Apps/Firewall, with
+strict no-dark-patterns rules. Full spec: [`setup-wizard-design.md`](setup-wizard-design.md).
 
 ### Dashboard
 
@@ -53,8 +70,10 @@ A grid of clickable status cards, each a badge + one-line summary + "manage" aff
 - Pending decisions: count (click -> Connections queue).
 - System drift: `None` / count (click -> the drifted items).
 
-A large **profile selector** (Locked / Normal / Development / Gaming / Update Window / Offline).
-"Normal" is still default-deny; profiles only activate different explicit rule sets.
+A large **network-profile selector** (Locked / Normal / Development / Gaming / Update Window /
+Offline). "Normal" is still default-deny; network profiles only activate different explicit rule
+sets. Separately, a **hardening-level** chip (Lite / Normal / Pro, or "Normal (customized)") shows
+the current cleanup posture and links to the Setup wizard / Features.
 
 ### Connections (live timeline)
 
@@ -70,11 +89,26 @@ Little Snitch / Portmaster-style. Each entry is a card:
 Timeout defaults to block. Repeated identical events are rate-limited without losing the audit
 record. A guessed hostname is never shown as fact.
 
+### Firewall (existing-rule review)
+
+A read-first review of the machine's existing Windows Defender Firewall rules (enumerated via
+`Get-NetFirewallRule` + filter cmdlets). Rules are grouped (User-created / Third-party app / Windows
+built-in / Group Policy) and tagged (Allow/Block, Inbound/Outbound, scope). Likely-risky or stale
+rules are **flagged with a plain-language reason** (e.g. enabled inbound allow to Any address on a
+sensitive port). The default recommended action is **Disable** (reversible), never delete; Group
+Policy rules are read-only with guidance; every change captures the full rule definition first. This
+is the in-app surface of the wizard's firewall step (see
+[`setup-wizard-design.md`](setup-wizard-design.md)).
+
 ### Features (human-readable toggles)
 
 Grouped clickable cards (Cloud storage, Connected experiences, Advertising, AI, Location, ...)
-mirroring [`debloat-catalog.md`](debloat-catalog.md) categories. Each toggle shows the truth
-triad and a "what this does / what you lose" tooltip. Risky items show a clear confirm.
+mirroring [`debloat-catalog.md`](debloat-catalog.md) and
+[`windows11-ux-restorations.md`](windows11-ux-restorations.md) categories. Each toggle shows the
+truth triad and a "what this does / what you lose" tooltip. Risky items show a clear confirm. A
+**hardening-level** control (Lite / Normal / Pro) re-seeds the suggested toggles; individual changes
+relabel it "(customized)". Nothing applies until confirmed, and a batch apply makes one restore
+point.
 
 ### Apps (debloat)
 
@@ -82,12 +116,12 @@ The catalog as a friendly checklist with category filters and risk labels (Safe 
 Care / System). Bulk actions create a single restore point. `System` items are visible but
 guarded. Each app shows its restore method (Store / Reprovision / Re-enable / Flagged).
 
-### Profiles
+### Network profiles
 
-Create/edit profiles as named explicit rule sets layered over default-deny. Gaming re-enables
-Xbox/Game Bar; Development adds scoped dev access (Git, package registries, etc.) with
+Create/edit **network profiles** as named explicit rule sets layered over default-deny. Gaming
+re-enables Xbox/Game Bar; Development adds scoped dev access (Git, package registries, etc.) with
 interpreter rules (a global `python.exe`/`node.exe` allow shows a clear warning that arbitrary
-code inherits access).
+code inherits access). (Distinct from the **hardening level** cleanup axis — see ADR 0005.)
 
 ### Updates (gated)
 

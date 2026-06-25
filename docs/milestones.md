@@ -116,9 +116,11 @@ Deliver verified policies for OneDrive, Windows Backup, settings sync, cloud cli
 cross-device experiences, Phone Link, advertising ID, consumer experiences, Spotlight, search
 highlights/web search, location, maps, Copilot, Recall, Click to Do, selected inbox-app AI
 features, and relevant tasks/services. Candidate scope is in
-[`debloat-catalog.md`](debloat-catalog.md); each policy's capture/restore follows
+[`debloat-catalog.md`](debloat-catalog.md) and the Windows 11 UX restorations in
+[`windows11-ux-restorations.md`](windows11-ux-restorations.md); each policy's capture/restore follows
 [`reversibility.md`](reversibility.md); mechanisms come from the dated
-[`research/`](research/) records (verified in a VM before implementation).
+[`research/`](research/) records (verified in a VM before implementation). Entries carry a per-level
+mapping for the Lite/Normal/Pro presets consumed by the Milestone 7 wizard.
 
 Gate: every policy supports detect/apply/verify/repair/rollback; unsupported builds are
 reported, not guessed; drift is detected after simulated restoration.
@@ -131,3 +133,47 @@ verification.
 
 Gate: update traffic remains blocked outside the window; cancellation restores locked mode;
 crash recovery restores locked mode; post-update drift is reported and repaired per policy.
+
+## Milestone 7: Guided setup, hardening presets, and UX restorations (not started)
+
+Deliver the friendly, Windows 11-style front-end over the policy engine: a re-runnable Setup
+Wizard, hardening presets, an existing-firewall review, and the Windows 11 UX-restoration policies.
+
+Decision: hardening presets (Lite / Normal / Pro) layered over declarative policies, report-first
+firewall review, and the no-dark-patterns invariants
+([ADR 0005](decisions/0005-hardening-presets-and-guided-setup.md)). UX behavior is specified in
+[`setup-wizard-design.md`](setup-wizard-design.md); restorations in
+[`windows11-ux-restorations.md`](windows11-ux-restorations.md); firewall/UX mechanisms in the
+[firewall/UX research record](research/2026-06-24-firewall-review-and-win11-ux.md).
+
+Deliverables:
+
+- Hardening presets as named selection sets (Lite / Normal / Pro) over the M2 policy engine; the
+  Pro tooltip renders verbatim. Distinct from network profiles.
+- Setup Wizard (Win11 Fluent): welcome + level → snapshot → firewall review → cloud-services tiles →
+  debloat inventory → Windows 11 fixes → other policies → review-diff → apply (one restore point) →
+  done. Re-runnable; every selection step is skippable; only the review step mutates.
+- Firewall review: read-only enumeration + classification + flagging; recommended action is
+  **disable** (reversible), never delete; rule definitions captured before any change; Group Policy
+  rules read-only.
+- Cloud/MS-services preset tiles and the debloat checklist (live-resolved) as the wizard surfaces of
+  the M5 policies.
+- Windows 11 UX-restoration policies (classic context menu, Explorer/Start/taskbar/lock-screen
+  tweaks), each reversible with capture/verify/rollback; unsupported third-party-dependent tweaks
+  are flagged, not applied.
+- The same toggles + hardening-level control surfaced outside the wizard (Features / Apps /
+  Firewall views).
+
+Gate:
+
+- No change is applied without an explicit Apply on the review step; a preset only seeds selections.
+- Applying a preset goes through the engine (idempotent, transactional, reversible) and creates one
+  restore point; per-item revert works.
+- Firewall review never deletes a rule without explicit confirm; disable is reversible; rule
+  definitions round-trip.
+- `Unknown`/`Unsupported`/`Care`/`System` items are never auto-selected; unsupported UX tweaks are
+  flagged, not applied.
+
+> Sequencing note: the firewall **audit** (read-only review) can ship alongside the network
+> milestones (M3/M4); the cloud/debloat/UX **policies** are delivered by M5; M7 assembles them into
+> the guided experience and the preset model.

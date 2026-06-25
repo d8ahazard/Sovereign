@@ -11,6 +11,9 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>Sovereign.Service</RootNamespace>
     <AssemblyName>Sovereign.Service</AssemblyName>
+    <!-- Required by the source-generated LibraryImport P/Invoke (SHLoadIndirectString) used to resolve
+         app display names. The generated marshalling stubs use unsafe blocks; we write none ourselves. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

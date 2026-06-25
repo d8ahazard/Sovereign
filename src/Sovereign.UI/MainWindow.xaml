@@ -8,89 +8,63 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <Grid Padding="24" RowSpacing="16">
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="40" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12">
-            <TextBlock Text="Sovereign" FontSize="28" FontWeight="SemiBold" VerticalAlignment="Center" />
-            <Border x:Name="ConnectionBadge"
-                    Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
-                    CornerRadius="12" Padding="10,2" VerticalAlignment="Center">
-                <TextBlock x:Name="ConnectionBadgeText" Text="Connecting..." FontSize="12" />
-            </Border>
-            <Button x:Name="RefreshButton" Content="Refresh" Click="OnRefreshClick" VerticalAlignment="Center" />
-        </StackPanel>
-
-        <!-- Status banner -->
-        <InfoBar x:Name="StatusBar" Grid.Row="1" IsOpen="False" IsClosable="False" />
-
-        <!-- Health summary cards -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12">
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
-                    CornerRadius="8" Padding="16" MinWidth="160">
-                <StackPanel Spacing="4">
-                    <TextBlock Text="State" Opacity="0.7" FontSize="12" />
-                    <TextBlock x:Name="StateText" Text="-" FontSize="20" FontWeight="SemiBold" />
-                </StackPanel>
-            </Border>
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
-                    CornerRadius="8" Padding="16" MinWidth="160">
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Version" Opacity="0.7" FontSize="12" />
-                    <TextBlock x:Name="VersionText" Text="-" FontSize="20" FontWeight="SemiBold" />
-                </StackPanel>
-            </Border>
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
-                    CornerRadius="8" Padding="16" MinWidth="160">
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Uptime (s)" Opacity="0.7" FontSize="12" />
-                    <TextBlock x:Name="UptimeText" Text="-" FontSize="20" FontWeight="SemiBold" />
-                </StackPanel>
-            </Border>
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
-                    CornerRadius="8" Padding="16" MinWidth="160">
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Events" Opacity="0.7" FontSize="12" />
-                    <TextBlock x:Name="EventCountText" Text="-" FontSize="20" FontWeight="SemiBold" />
-                </StackPanel>
-            </Border>
-        </StackPanel>
-
-        <!-- Events -->
-        <Grid Grid.Row="3" RowSpacing="8">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-            <TextBlock Grid.Row="0" Text="Recent activity" FontSize="18" FontWeight="SemiBold" />
-            <ListView x:Name="EventsList" Grid.Row="1"
-                      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
-                      CornerRadius="8">
-                <ListView.ItemTemplate>
-                    <DataTemplate x:DataType="local:EventRow">
-                        <Grid ColumnSpacing="12" Padding="4">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="160" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Time}" Opacity="0.7" />
-                            <TextBlock Grid.Column="1" Text="{x:Bind Category}" FontWeight="SemiBold" />
-                            <TextBlock Grid.Column="2" Text="{x:Bind Message}" TextWrapping="Wrap" />
-                        </Grid>
-                    </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Height="40" Background="Transparent">
+            <StackPanel Orientation="Horizontal" Spacing="10" Margin="16,0,0,0" VerticalAlignment="Center">
+                <Image Source="ms-appx:///Assets/sovereign-logo.png" Width="20" Height="20" />
+                <TextBlock Text="Sovereign" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" />
+            </StackPanel>
         </Grid>
+
+        <NavigationView x:Name="Nav"
+                    Grid.Row="1"
+                    PaneDisplayMode="Left"
+                    IsBackButtonVisible="Collapsed"
+                    IsSettingsVisible="False"
+                    IsPaneToggleButtonVisible="True"
+                    SelectionChanged="OnNavSelectionChanged">
+
+        <NavigationView.MenuItems>
+            <NavigationViewItem Content="Dashboard" Tag="dashboard" IsSelected="True">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE80F;" />
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="Cleanup &amp; hardening" Tag="cleanup">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE90F;" />
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="Apps &amp; debloat" Tag="apps">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xECAA;" />
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="Activity" Tag="events">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE9D9;" />
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="Restore points" Tag="restore">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE7A7;" />
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+        </NavigationView.MenuItems>
+
+        <NavigationView.PaneFooter>
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="12,8" VerticalAlignment="Center">
+                <Ellipse x:Name="StatusDot" Width="10" Height="10" Fill="{ThemeResource SystemFillColorCautionBrush}" />
+                <TextBlock x:Name="StatusText" Text="Connecting" FontSize="12" VerticalAlignment="Center" />
+            </StackPanel>
+        </NavigationView.PaneFooter>
+
+        <Frame x:Name="ContentFrame" />
+        </NavigationView>
     </Grid>
 </Window>

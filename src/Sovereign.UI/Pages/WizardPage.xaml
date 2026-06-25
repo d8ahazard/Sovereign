@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Sovereign.UI.Pages.WizardPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:Sovereign.UI.ViewModels"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="240" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Progress rail -->
+        <Border Grid.Column="0" Background="{ThemeResource LayerFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
+            <StackPanel Margin="24,40,16,0" Spacing="6">
+                <TextBlock Text="Set up Sovereign" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16" />
+                <TextBlock x:Name="Rail0" Text="1   Welcome" Padding="8,8" CornerRadius="6" />
+                <TextBlock x:Name="Rail1" Text="2   Privacy &amp; cleanup" Padding="8,8" CornerRadius="6" />
+                <TextBlock x:Name="Rail2" Text="3   Remove bloat" Padding="8,8" CornerRadius="6" />
+                <TextBlock x:Name="Rail3" Text="4   Review" Padding="8,8" CornerRadius="6" />
+                <TextBlock x:Name="Rail4" Text="5   All done" Padding="8,8" CornerRadius="6" />
+            </StackPanel>
+        </Border>
+
+        <!-- Step content + footer -->
+        <Grid Grid.Column="1" Padding="40,40,40,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Step 0: Welcome -->
+            <ScrollViewer x:Name="Step0" Grid.Row="0" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="18" MaxWidth="640" HorizontalAlignment="Left">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Let's tidy up this PC" FontSize="30" FontWeight="SemiBold" />
+                        <TextBlock TextWrapping="Wrap" Opacity="0.8"
+                                   Text="Sovereign turns off the noisy, ad-driven, and privacy-eroding stuff Windows ships with, and helps you remove preinstalled junk. Pick how far to go — you'll see exactly what changes before anything happens." />
+                    </StackPanel>
+
+                    <TextBlock Text="How far should we go?" FontWeight="SemiBold" />
+                    <RadioButton x:Name="LevelLite" GroupName="wlvl" Checked="OnLevelChecked">
+                        <StackPanel Margin="4,2">
+                            <TextBlock Text="Lite — just the worst offenders" FontWeight="SemiBold" />
+                            <TextBlock Text="Only the most intrusive stuff: ads, suggestions, web results in search. Nothing you'd miss." Opacity="0.7" FontSize="12" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton x:Name="LevelNormal" GroupName="wlvl" IsChecked="True" Checked="OnLevelChecked">
+                        <StackPanel Margin="4,2">
+                            <TextBlock Text="Normal — the balanced cleanup (recommended)" FontWeight="SemiBold" />
+                            <TextBlock Text="Reversible telemetry, cloud, and AI reductions plus safe debloat. What most people want." Opacity="0.7" FontSize="12" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton x:Name="LevelPro" GroupName="wlvl" Checked="OnLevelChecked"
+                                 ToolTipService.ToolTip="I just want a fucking Windows computer.">
+                        <StackPanel Margin="4,2">
+                            <TextBlock Text="Pro — strip it down" FontWeight="SemiBold" />
+                            <TextBlock Text="Everything in Normal plus the more aggressive cloud, AI, and bloat removal." Opacity="0.7" FontSize="12" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </RadioButton>
+
+                    <InfoBar IsOpen="True" IsClosable="False" Severity="Success"
+                             Title="Everything is reversible"
+                             Message="Each change is captured first, so you can undo all of it later from Restore points. Removing apps is the one exception — we'll point those out clearly." />
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Step 1: Privacy & cleanup -->
+            <Grid x:Name="Step1" Grid.Row="0" Visibility="Collapsed" RowSpacing="12">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0" Spacing="4">
+                    <TextBlock Text="Privacy &amp; cleanup" FontSize="24" FontWeight="SemiBold" />
+                    <TextBlock x:Name="Step1Subtitle" Opacity="0.75" TextWrapping="Wrap"
+                               Text="These reversible tweaks are pre-selected for your level. Untick anything you want to keep." />
+                </StackPanel>
+                <ListView x:Name="PolicyList" Grid.Row="1" SelectionMode="None"
+                          BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Padding" Value="12,8" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PolicyViewModel">
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <CheckBox Grid.Column="0" IsChecked="{x:Bind IsSelected, Mode=TwoWay}" MinWidth="0" VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="1" Spacing="2">
+                                    <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{x:Bind Description}" Opacity="0.7" FontSize="12" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <Border Grid.Column="2" CornerRadius="10" Padding="8,2" VerticalAlignment="Center"
+                                        Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                                    <TextBlock Text="{x:Bind Category}" FontSize="11" />
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
+
+            <!-- Step 2: Remove bloat -->
+            <Grid x:Name="Step2" Grid.Row="0" Visibility="Collapsed" RowSpacing="12">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0" Spacing="4">
+                    <TextBlock Text="Remove preinstalled bloat" FontSize="24" FontWeight="SemiBold" />
+                    <TextBlock Opacity="0.75" TextWrapping="Wrap"
+                               Text="Store apps and classic programs we think are junk (games, promos, OEM and antivirus trials). Removing programs runs their uninstaller and can't be undone from here." />
+                </StackPanel>
+                <ListView x:Name="BloatList" Grid.Row="1" SelectionMode="None"
+                          BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Padding" Value="12,8" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:AppRowViewModel">
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <CheckBox Grid.Column="0" IsChecked="{x:Bind IsSelected, Mode=TwoWay}"
+                                          IsEnabled="{x:Bind CanSelect, Mode=OneWay}" MinWidth="0" VerticalAlignment="Center" />
+                                <Grid Grid.Column="1" Width="28" Height="28" VerticalAlignment="Center">
+                                    <Border Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" CornerRadius="6"
+                                            Visibility="{x:Bind GlyphVisibility, Mode=OneWay}">
+                                        <FontIcon Glyph="&#xECAA;" FontSize="14" Opacity="0.7" />
+                                    </Border>
+                                    <Image Source="{x:Bind IconSource, Mode=OneWay}" Width="28" Height="28"
+                                           Visibility="{x:Bind IconVisibility, Mode=OneWay}" />
+                                </Grid>
+                                <StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{x:Bind DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{x:Bind Description}" Opacity="0.7" FontSize="12" TextWrapping="Wrap" />
+                                    <TextBlock Text="{x:Bind PublisherLine}" Opacity="0.5" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
+
+            <!-- Step 3: Review -->
+            <ScrollViewer x:Name="Step3" Grid.Row="0" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="16" MaxWidth="640" HorizontalAlignment="Left">
+                    <TextBlock Text="Review &amp; apply" FontSize="24" FontWeight="SemiBold" />
+                    <TextBlock x:Name="ReviewSummary" Opacity="0.85" TextWrapping="Wrap" />
+                    <InfoBar IsOpen="True" IsClosable="False" Severity="Informational"
+                             Title="A restore point is captured first"
+                             Message="Policy changes are reversible from Restore points. App/program removals are not — those are listed above so there are no surprises." />
+                    <StackPanel x:Name="ReviewDetail" Spacing="6" />
+                    <ProgressBar x:Name="ApplyProgress" Visibility="Collapsed" />
+                    <TextBlock x:Name="ApplyStatus" Opacity="0.8" Visibility="Collapsed" TextWrapping="Wrap" />
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Step 4: Done -->
+            <ScrollViewer x:Name="Step4" Grid.Row="0" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="16" MaxWidth="640" HorizontalAlignment="Left">
+                    <FontIcon Glyph="&#xE930;" FontSize="40" HorizontalAlignment="Left"
+                              Foreground="{ThemeResource SystemFillColorSuccessBrush}" />
+                    <TextBlock Text="All done" FontSize="28" FontWeight="SemiBold" />
+                    <TextBlock x:Name="DoneSummary" Opacity="0.85" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Button x:Name="DoneRestoreButton" Content="Open Restore points" Click="OnOpenRestore" />
+                        <Button x:Name="DoneCleanupButton" Content="Fine-tune in Cleanup" Click="OnOpenCleanup" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Footer -->
+            <Grid Grid.Row="1" Padding="0,16" ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Button x:Name="SkipButton" Grid.Column="0" Content="Skip setup" Click="OnSkip" />
+                <ProgressRing x:Name="Busy" Grid.Column="1" Width="20" Height="20" IsActive="False" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                <Button x:Name="BackButton" Grid.Column="2" Content="Back" Click="OnBack" />
+                <Button x:Name="NextButton" Grid.Column="3" Content="Next" Style="{ThemeResource AccentButtonStyle}" Click="OnNext" />
+            </Grid>
+        </Grid>
+    </Grid>
+</Page>

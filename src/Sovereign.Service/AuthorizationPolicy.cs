@@ -27,12 +27,19 @@ public sealed class AuthorizationPolicy
         IpcOperation.PlanPolicy,
         IpcOperation.ApplyPolicy,
         IpcOperation.RollbackPolicy,
+        IpcOperation.ListRestorePoints,
+        IpcOperation.ListApps,
+        IpcOperation.RemoveApp,
+        IpcOperation.ListPrograms,
+        IpcOperation.RemoveProgram,
     ];
 
     private readonly HashSet<IpcOperation> _mutatingOperations =
     [
         IpcOperation.ApplyPolicy,
         IpcOperation.RollbackPolicy,
+        IpcOperation.RemoveApp,
+        IpcOperation.RemoveProgram,
     ];
 
     /// <summary>

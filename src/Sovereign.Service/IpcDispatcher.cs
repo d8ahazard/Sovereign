@@ -17,6 +17,9 @@ public sealed partial class IpcDispatcher(
     AuthorizationPolicy authorization,
     PolicyEngine policyEngine,
     PolicyCatalog policyCatalog,
+    IRestorePointStore restorePointStore,
+    AppxManager appxManager,
+    Win32ProgramManager programManager,
     ILogger<IpcDispatcher> logger)
 {
     private readonly IEventStore _eventStore = eventStore;
@@ -24,6 +27,9 @@ public sealed partial class IpcDispatcher(
     private readonly AuthorizationPolicy _authorization = authorization;
     private readonly PolicyEngine _policyEngine = policyEngine;
     private readonly PolicyCatalog _policyCatalog = policyCatalog;
+    private readonly IRestorePointStore _restorePointStore = restorePointStore;
+    private readonly AppxManager _appxManager = appxManager;
+    private readonly Win32ProgramManager _programManager = programManager;
     private readonly ILogger<IpcDispatcher> _logger = logger;
 
     /// <summary>
@@ -58,6 +64,11 @@ public sealed partial class IpcDispatcher(
                 IpcOperation.PlanPolicy => await this.PlanPolicyAsync(request, cancellationToken).ConfigureAwait(false),
                 IpcOperation.ApplyPolicy => await this.ApplyPolicyAsync(request, caller, cancellationToken).ConfigureAwait(false),
                 IpcOperation.RollbackPolicy => await this.RollbackPolicyAsync(request, caller, cancellationToken).ConfigureAwait(false),
+                IpcOperation.ListRestorePoints => Ok(request.RequestId) with { RestorePoints = await this.ListRestorePointsAsync(cancellationToken).ConfigureAwait(false) },
+                IpcOperation.ListApps => Ok(request.RequestId) with { Apps = new AppListResult(await this._appxManager.ListAsync(cancellationToken).ConfigureAwait(false)) },
+                IpcOperation.RemoveApp => await this.RemoveAppAsync(request, caller, cancellationToken).ConfigureAwait(false),
+                IpcOperation.ListPrograms => Ok(request.RequestId) with { Apps = new AppListResult(await this._programManager.ListAsync(cancellationToken).ConfigureAwait(false)) },
+                IpcOperation.RemoveProgram => await this.RemoveProgramAsync(request, caller, cancellationToken).ConfigureAwait(false),
                 _ => Error(request.RequestId, IpcErrorCode.UnknownOperation, "Unknown operation."),
             };
         }
@@ -142,6 +153,46 @@ public sealed partial class IpcDispatcher(
         await this.TryAuditAsync("policy.rollback.requested", $"RollbackPolicy {policy!.Metadata.Id} requested by {caller.UserNameOrUnknown}.", cancellationToken).ConfigureAwait(false);
         PolicyExecutionReport report = await this._policyEngine.RollbackAsync(policy!.Metadata.Id, cancellationToken).ConfigureAwait(false);
         return Ok(request.RequestId) with { PolicyRun = PolicyMapper.ToRun(report) };
+    }
+
+    private async Task<RestorePointListResult> ListRestorePointsAsync(CancellationToken cancellationToken)
+    {
+        IReadOnlyList<RestorePoint> points = await this._restorePointStore.QueryAsync(100, cancellationToken).ConfigureAwait(false);
+        return new RestorePointListResult(points.Select(PolicyMapper.ToRestorePoint).ToArray());
+    }
+
+    private async Task<ResponseEnvelope> RemoveAppAsync(RequestEnvelope request, CallerContext caller, CancellationToken cancellationToken)
+    {
+        string? fullName = request.AppTarget?.PackageFullName;
+        if (string.IsNullOrWhiteSpace(fullName))
+        {
+            return Error(request.RequestId, IpcErrorCode.BadRequest, "A package full name is required.");
+        }
+
+        await this.TryAuditAsync("app.remove.requested", $"RemoveApp {fullName} requested by {caller.UserNameOrUnknown}.", cancellationToken).ConfigureAwait(false);
+        AppActionResult result = await this._appxManager.RemoveAsync(fullName, cancellationToken).ConfigureAwait(false);
+        await this.TryAuditAsync(
+            result.Success ? "app.remove.applied" : "app.remove.failed",
+            $"RemoveApp {fullName}: {(result.Success ? "removed" : result.Detail)}",
+            cancellationToken).ConfigureAwait(false);
+        return Ok(request.RequestId) with { AppAction = result };
+    }
+
+    private async Task<ResponseEnvelope> RemoveProgramAsync(RequestEnvelope request, CallerContext caller, CancellationToken cancellationToken)
+    {
+        string? programId = request.AppTarget?.PackageFullName;
+        if (string.IsNullOrWhiteSpace(programId))
+        {
+            return Error(request.RequestId, IpcErrorCode.BadRequest, "A program id is required.");
+        }
+
+        await this.TryAuditAsync("program.remove.requested", $"RemoveProgram {programId} requested by {caller.UserNameOrUnknown}.", cancellationToken).ConfigureAwait(false);
+        AppActionResult result = await this._programManager.RemoveAsync(programId, cancellationToken).ConfigureAwait(false);
+        await this.TryAuditAsync(
+            result.Success ? "program.remove.applied" : "program.remove.failed",
+            $"RemoveProgram {programId}: {(result.Success ? "removed" : result.Detail)}",
+            cancellationToken).ConfigureAwait(false);
+        return Ok(request.RequestId) with { AppAction = result };
     }
 
     private bool TryResolvePolicy(RequestEnvelope request, out IPolicy? policy, out ResponseEnvelope? error)

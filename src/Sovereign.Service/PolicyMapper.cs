@@ -1,5 +1,6 @@
 using Sovereign.Contracts.Ipc;
 using Sovereign.Policy;
+using Sovereign.Storage;
 
 namespace Sovereign.Service;
 
@@ -11,8 +12,11 @@ internal static class PolicyMapper
     public static PolicyInfo ToInfo(IPolicy policy)
     {
         PolicyMetadata m = policy.Metadata;
-        return new PolicyInfo(m.Id, m.Version, m.Title, m.Description, m.RiskLevel, m.Scope, m.RequiresReboot);
+        return new PolicyInfo(m.Id, m.Version, m.Title, m.Description, m.RiskLevel, m.Scope, m.RequiresReboot, m.Level, m.Category);
     }
+
+    public static RestorePointInfo ToRestorePoint(RestorePoint point) =>
+        new(point.Id, point.PolicyId, point.CorrelationId, point.CreatedUtc);
 
     public static PolicyChangeInfo ToChange(PolicyChange change) =>
         new(change.Key, ToNullable(change.From), ToNullable(change.To), change.Explanation);

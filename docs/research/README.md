@@ -76,6 +76,7 @@ Copy the block below into a new dated file.
 - [2026-06-24: Named-pipe IPC security on .NET 10](2026-06-24-named-pipe-ipc-security.md)
 - [2026-06-24: Appx/provisioned-package debloat and its reversibility](2026-06-24-appx-debloat-and-reversibility.md)
 - [2026-06-24: Privacy, policy, and Copilot controls](2026-06-24-privacy-policy-and-copilot-controls.md)
+- [2026-06-24: Firewall rule review and Windows 11 UX restorations](2026-06-24-firewall-review-and-win11-ux.md)
 
 These records are research groundwork for the de-cloud/debloat policy pack (Milestone 5). They
 do not authorize implementation; each claim must still meet the verification bar above (current

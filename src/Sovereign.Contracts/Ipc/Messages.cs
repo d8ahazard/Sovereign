@@ -65,11 +65,13 @@ public sealed record QueryEventsResponse(IReadOnlyList<EventRecord> Events);
 /// <param name="Operation">The requested operation.</param>
 /// <param name="Query">Payload for <see cref="IpcOperation.QueryEvents"/>; otherwise null.</param>
 /// <param name="PolicyTarget">Payload for policy detect/plan/apply/rollback operations; otherwise null.</param>
+/// <param name="AppTarget">Payload for <see cref="IpcOperation.RemoveApp"/>; otherwise null.</param>
 public sealed record RequestEnvelope(
     long RequestId,
     IpcOperation Operation,
     QueryEventsRequest? Query,
-    PolicyTargetRequest? PolicyTarget = null);
+    PolicyTargetRequest? PolicyTarget = null,
+    AppTargetRequest? AppTarget = null);
 
 /// <summary>
 /// The envelope for an operation response.
@@ -84,6 +86,9 @@ public sealed record RequestEnvelope(
 /// <param name="Plan">Payload for <see cref="IpcOperation.PlanPolicy"/>; otherwise null.</param>
 /// <param name="Detect">Payload for <see cref="IpcOperation.DetectPolicy"/>; otherwise null.</param>
 /// <param name="PolicyRun">Payload for <see cref="IpcOperation.ApplyPolicy"/>/<see cref="IpcOperation.RollbackPolicy"/>; otherwise null.</param>
+/// <param name="RestorePoints">Payload for <see cref="IpcOperation.ListRestorePoints"/>; otherwise null.</param>
+/// <param name="Apps">Payload for <see cref="IpcOperation.ListApps"/>; otherwise null.</param>
+/// <param name="AppAction">Payload for <see cref="IpcOperation.RemoveApp"/>; otherwise null.</param>
 public sealed record ResponseEnvelope(
     long RequestId,
     IpcErrorCode ErrorCode,
@@ -94,4 +99,7 @@ public sealed record ResponseEnvelope(
     PolicyListResult? Policies = null,
     PolicyPlanInfo? Plan = null,
     PolicyDetectResult? Detect = null,
-    PolicyRunResult? PolicyRun = null);
+    PolicyRunResult? PolicyRun = null,
+    RestorePointListResult? RestorePoints = null,
+    AppListResult? Apps = null,
+    AppActionResult? AppAction = null);

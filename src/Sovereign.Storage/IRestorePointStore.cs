@@ -40,4 +40,11 @@ public interface IRestorePointStore
     /// <param name="policyId">The policy to look up.</param>
     /// <param name="cancellationToken">A token to observe for cancellation.</param>
     ValueTask<RestorePoint?> GetLatestAsync(string policyId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Returns the most recent restore points across all policies, newest first.
+    /// </summary>
+    /// <param name="limit">Maximum number of restore points to return (clamped to a safe bound).</param>
+    /// <param name="cancellationToken">A token to observe for cancellation.</param>
+    ValueTask<IReadOnlyList<RestorePoint>> QueryAsync(int limit, CancellationToken cancellationToken);
 }

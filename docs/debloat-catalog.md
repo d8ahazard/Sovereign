@@ -26,6 +26,25 @@ classified by risk so the UI can be friendly without being reckless.
 
 Every action is reversible unless explicitly `Flagged`. See `reversibility.md`.
 
+## Hardening levels (Lite / Normal / Pro)
+
+The Setup wizard and Features view select entries by **hardening level**
+([ADR 0005](decisions/0005-hardening-presets-and-guided-setup.md)). Each entry maps to a level using
+its `Default` and `Risk`:
+
+- **Lite** — only `Safe` items with high nuisance value (promoted games, News/Tips, Bing/web in
+  search, ad/suggestion content). No app a typical user might use; never `Care`/`System`.
+- **Normal** *(recommended, default)* — Lite plus the broadly-agreed `Remove`/`Disable` entries at
+  `Safe`/`Caution` risk (telemetry, consumer/cloud experiences, most promoted apps, AI consumer
+  features). All reversible.
+- **Pro** — "I just want a fucking windows computer": Normal plus aggressive removal/disable of
+  cloud, cross-device, and most `Optional` inbox apps. Still never auto-selects `System` or
+  `Flagged` items, and still fully reversible; `Flagged` always needs an explicit confirm.
+
+`Care`/`System` items are always opt-in only. `Unknown`/`Unsupported` items are shown but never
+auto-selected. The level only seeds the initial selection; the user edits item-by-item before apply
+(which relabels the level "customized").
+
 ---
 
 ## 1. Games and casual/promo apps

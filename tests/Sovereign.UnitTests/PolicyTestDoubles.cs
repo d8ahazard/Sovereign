@@ -45,6 +45,10 @@ internal sealed class InMemoryRestorePointStore : IRestorePointStore
 
     public ValueTask<RestorePoint?> GetLatestAsync(string policyId, CancellationToken cancellationToken) =>
         ValueTask.FromResult(this._latest.TryGetValue(policyId, out RestorePoint? point) ? point : null);
+
+    public ValueTask<IReadOnlyList<RestorePoint>> QueryAsync(int limit, CancellationToken cancellationToken) =>
+        ValueTask.FromResult<IReadOnlyList<RestorePoint>>(
+            this._latest.Values.OrderByDescending(p => p.Id).Take(Math.Clamp(limit, 1, 500)).ToArray());
 }
 
 /// <summary>

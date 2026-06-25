@@ -37,7 +37,7 @@ public sealed class IpcEndToEndTests : IAsyncLifetime
         var runtime = new ServiceRuntime();
         var catalog = new PolicyCatalog(DemoPolicies.CreateDefault());
         var engine = new PolicyEngine(new InMemorySettingProvider(), this._restore, this._store);
-        var dispatcher = new IpcDispatcher(this._store, runtime, new AuthorizationPolicy(), engine, catalog, NullLogger<IpcDispatcher>.Instance);
+        var dispatcher = new IpcDispatcher(this._store, runtime, new AuthorizationPolicy(), engine, catalog, this._restore, new AppxManager(NullLogger<AppxManager>.Instance), new Win32ProgramManager(NullLogger<Win32ProgramManager>.Instance), NullLogger<IpcDispatcher>.Instance);
         this._server = new NamedPipeServer(
             new PipeServerOptions { PipeName = this._pipeName },
             dispatcher,

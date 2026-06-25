@@ -1,107 +1,106 @@
 using System;
-using System.Collections.ObjectModel;
-using System.Globalization;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Sovereign.Contracts.Ipc;
+using Microsoft.UI.Xaml.Media;
 using Sovereign.Ipc;
+using Sovereign.UI.Pages;
+using Sovereign.UI.Services;
+using Windows.UI;
 
 namespace Sovereign.UI;
 
 /// <summary>
-/// A single recent-activity row shown in the dashboard list.
-/// </summary>
-/// <param name="Time">Formatted timestamp.</param>
-/// <param name="Category">Event category.</param>
-/// <param name="Message">Event message.</param>
-public sealed record EventRow(string Time, string Category, string Message);
-
-/// <summary>
-/// The main dashboard window. It connects to the service over the authenticated IPC client and
-/// shows health plus recent activity. If the service is unavailable it degrades to a clear,
-/// friendly offline state instead of failing (agent_start.md section 9).
+/// The main shell window: a Fluent <see cref="NavigationView"/> hosting the dashboard, cleanup,
+/// activity, and restore-point pages. It owns the live connection indicator and degrades to a clear
+/// offline state when the service is unreachable (agent_start.md section 9).
 /// </summary>
 public sealed partial class MainWindow : Window
 {
-    private readonly ObservableCollection<EventRow> _events = [];
-
-    /// <summary>Initializes the window and kicks off the first refresh.</summary>
+    /// <summary>Initializes the window, applies the Mica backdrop, and shows the dashboard.</summary>
     public MainWindow()
     {
         this.InitializeComponent();
         this.Title = "Sovereign";
-        this.EventsList.ItemsSource = this._events;
-        _ = this.RefreshAsync();
+        this.SystemBackdrop = new MicaBackdrop();
+        this.ExtendsContentIntoTitleBar = true;
+        this.SetTitleBar(this.AppTitleBar);
+        this.TrySetIcon();
+        this.ContentFrame.Navigate(typeof(DashboardPage));
+        _ = this.UpdateConnectionAsync();
     }
 
-    private async void OnRefreshClick(object sender, RoutedEventArgs e)
+    private void TrySetIcon()
     {
-        await this.RefreshAsync().ConfigureAwait(true);
-    }
-
-    private async Task RefreshAsync()
-    {
-        this.RefreshButton.IsEnabled = false;
-        this.SetBadge("Connecting...", connected: false);
-
         try
         {
-            await using IpcClient client = await IpcClient.ConnectAsync("sovereign-ui", connectTimeout: TimeSpan.FromSeconds(5)).ConfigureAwait(true);
-
-            HealthStatus health = await client.GetHealthAsync().ConfigureAwait(true);
-            QueryEventsResponse events = await client.QueryEventsAsync(limit: 100).ConfigureAwait(true);
-
-            this.StateText.Text = health.State;
-            this.VersionText.Text = health.ServiceVersion;
-            this.UptimeText.Text = health.UptimeSeconds.ToString(CultureInfo.CurrentCulture);
-            this.EventCountText.Text = health.EventCount.ToString(CultureInfo.CurrentCulture);
-
-            this._events.Clear();
-            foreach (EventRecord record in events.Events)
+            string iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "sovereign.ico");
+            if (System.IO.File.Exists(iconPath))
             {
-                this._events.Insert(0, new EventRow(
-                    record.TimestampUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.CurrentCulture),
-                    record.Category,
-                    record.Message));
+                this.AppWindow.SetIcon(iconPath);
             }
-
-            this.SetBadge("Connected", connected: true);
-            this.StatusBar.IsOpen = false;
         }
-        catch (IpcException ex)
+        catch (Exception)
         {
-            this.SetBadge("Offline", connected: false);
-            this.ShowOffline(ex.Message);
-        }
-        finally
-        {
-            this.RefreshButton.IsEnabled = true;
+            // A missing or unreadable icon is non-fatal; the app still runs.
         }
     }
 
-    private void SetBadge(string text, bool connected)
+    private void OnNavSelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
-        this.ConnectionBadgeText.Text = text;
-        string resource = connected ? "SystemFillColorSuccessBackgroundBrush" : "SystemFillColorCautionBackgroundBrush";
-        if (Application.Current.Resources.TryGetValue(resource, out object? brush)
-            && brush is Microsoft.UI.Xaml.Media.Brush typed)
+        if (args.SelectedItem is not NavigationViewItem item || item.Tag is not string tag)
         {
-            this.ConnectionBadge.Background = typed;
+            return;
+        }
+
+        Type page = tag switch
+        {
+            "cleanup" => typeof(CleanupPage),
+            "apps" => typeof(AppsPage),
+            "events" => typeof(EventsPage),
+            "restore" => typeof(RestorePointsPage),
+            _ => typeof(DashboardPage),
+        };
+
+        if (this.ContentFrame.CurrentSourcePageType != page)
+        {
+            this.ContentFrame.Navigate(page);
+        }
+
+        _ = this.UpdateConnectionAsync();
+    }
+
+    /// <summary>Navigates the content frame to the cleanup page (used by dashboard quick actions).</summary>
+    public void NavigateToCleanup()
+    {
+        foreach (object menuItem in this.Nav.MenuItems)
+        {
+            if (menuItem is NavigationViewItem { Tag: "cleanup" } item)
+            {
+                this.Nav.SelectedItem = item;
+                return;
+            }
         }
     }
 
-    private void ShowOffline(string detail)
+    private async Task UpdateConnectionAsync()
     {
-        this.StateText.Text = "Offline";
-        this.VersionText.Text = "-";
-        this.UptimeText.Text = "-";
-        this.EventCountText.Text = "-";
-        this._events.Clear();
+        try
+        {
+            string version = await SovereignClient.RunAsync(c => c.GetVersionAsync()).ConfigureAwait(true);
+            this.SetStatus($"Connected \u2022 {version}", connected: true);
+        }
+        catch (IpcException)
+        {
+            this.SetStatus("Service offline", connected: false);
+        }
+    }
 
-        this.StatusBar.Severity = InfoBarSeverity.Warning;
-        this.StatusBar.Title = "Service not reachable";
-        this.StatusBar.Message = $"{detail} Start the Sovereign service, then click Refresh.";
-        this.StatusBar.IsOpen = true;
+    private void SetStatus(string text, bool connected)
+    {
+        this.StatusText.Text = text;
+        this.StatusDot.Fill = new SolidColorBrush(connected
+            ? Color.FromArgb(255, 56, 142, 60)
+            : Color.FromArgb(255, 201, 138, 19));
     }
 }

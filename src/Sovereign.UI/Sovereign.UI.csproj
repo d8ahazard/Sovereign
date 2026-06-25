@@ -22,6 +22,7 @@
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
 
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\sovereign.ico</ApplicationIcon>
 
     <!-- Marks this as the UI project so the strict warnings-as-errors posture is relaxed for
          generated XAML code-behind (see Directory.Build.targets). -->
@@ -34,6 +35,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Sovereign.Ipc\Sovereign.Ipc.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\sovereign.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\sovereign-logo.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

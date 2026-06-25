@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using Microsoft.UI.Xaml;
 
 namespace Sovereign.UI;
@@ -8,18 +10,40 @@ namespace Sovereign.UI;
 /// </summary>
 public partial class App : Application
 {
-    private Window? _window;
-
     /// <summary>Initializes the application.</summary>
     public App()
     {
         this.InitializeComponent();
     }
 
+    /// <summary>The single shell window, available to pages for cross-page navigation.</summary>
+    public static MainWindow? Shell { get; private set; }
+
     /// <inheritdoc />
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        this._window = new MainWindow();
-        this._window.Activate();
+        this.UnhandledException += static (_, e) => Log(e.Exception);
+        try
+        {
+            Shell = new MainWindow();
+            Shell.Activate();
+        }
+        catch (Exception ex)
+        {
+            Log(ex);
+            throw;
+        }
+    }
+
+    private static void Log(Exception ex)
+    {
+        try
+        {
+            string path = Path.Combine(Path.GetTempPath(), "sovereign-ui-crash.log");
+            File.WriteAllText(path, $"{DateTimeOffset.Now:O}{Environment.NewLine}{ex}");
+        }
+        catch (IOException)
+        {
+        }
     }
 }

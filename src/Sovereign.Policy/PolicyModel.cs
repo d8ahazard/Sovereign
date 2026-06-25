@@ -13,6 +13,8 @@ namespace Sovereign.Policy;
 /// <param name="Scope">Machine- or user-scoped.</param>
 /// <param name="RequiresReboot">Whether applying may require a reboot to take full effect.</param>
 /// <param name="RequiresLogoff">Whether applying may require a logoff to take full effect.</param>
+/// <param name="Level">The hardening preset this policy belongs to (ADR 0005).</param>
+/// <param name="Category">A short grouping label for the UI (for example, "Privacy").</param>
 public sealed record PolicyMetadata(
     string Id,
     int Version,
@@ -21,7 +23,9 @@ public sealed record PolicyMetadata(
     PolicyRiskLevel RiskLevel,
     PolicyScope Scope,
     bool RequiresReboot = false,
-    bool RequiresLogoff = false);
+    bool RequiresLogoff = false,
+    PolicyLevel Level = PolicyLevel.Normal,
+    string Category = "General");
 
 /// <summary>
 /// A declared desired state for a single setting.
